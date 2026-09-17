@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mis finanzas">
+<meta name="theme-color" content="#3F6F63">
+<title>Mis finanzas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #F5F1E8; --card: #FFFFFF; --ink: #26302B; --ink-soft: #5B6560;
+    --teal: #3F6F63; --teal-dark: #2C5049; --sage: #8FAF83; --ochre: #A8562F;
+    --ochre-soft: #F1E2D6; --line: #E3DCCC; --chip-bg: #EFE9DA;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: #1B1F1D; --card: #242A27; --ink: #EDEAE1; --ink-soft: #A7ADA6;
+      --teal: #7EAFA1; --teal-dark: #9FC4B8; --sage: #8FAF83; --ochre: #D98352;
+      --ochre-soft: #3A2E24; --line: #383F3B; --chip-bg: #2E332F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1B1F1D; --card: #242A27; --ink: #EDEAE1; --ink-soft: #A7ADA6;
+    --teal: #7EAFA1; --teal-dark: #9FC4B8; --sage: #8FAF83; --ochre: #D98352;
+    --ochre-soft: #3A2E24; --line: #383F3B; --chip-bg: #2E332F;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.05rem; margin: 0 0 12px; }
+  .sub { color: var(--ink-soft); font-size: 0.88rem; margin: 0 0 18px; line-height: 1.5; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; background: var(--chip-bg); padding: 4px; border-radius: 11px; }
+  .tab-btn { flex: 1; background: transparent; border: none; padding: 10px 4px; font-family: 'Inter'; font-weight: 600; font-size: 0.82rem; color: var(--ink-soft); border-radius: 8px; cursor: pointer; }
+  .tab-btn.active { background: var(--card); color: var(--ink); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  label.field { display: block; font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 5px; }
+  input, select { width: 100%; font-family: 'Inter'; font-size: 0.95rem; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); margin-bottom: 12px; }
+  input:focus, select:focus { outline: 2px solid var(--teal); outline-offset: 1px; }
+  button { font-family: 'Inter'; font-weight: 600; font-size: 0.9rem; border: none; border-radius: 9px; padding: 11px 14px; cursor: pointer; width: 100%; }
+  button.primary { background: var(--teal); color: #fff; }
+  button.ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); margin-top: 6px; }
+  button.small { width: auto; padding: 7px 11px; font-size: 0.78rem; }
+  button.danger-ghost { background: transparent; color: var(--ochre); border: 1px solid var(--ochre); }
+  .item { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 10px; background: var(--bg); }
+  .item-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
+  .item-sub { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 10px; }
+  .bar-track { height: 10px; background: var(--ochre-soft); border-radius: 999px; overflow: hidden; margin: 6px 0; }
+  .bar-fill { height: 100%; background: var(--sage); border-radius: 999px; }
+  .row2 { display: flex; gap: 8px; }
+  .row2 > * { flex: 1; }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--teal-dark); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; max-width: 90%; text-align: center; z-index: 50; }
+  .toast.show { opacity: 1; }
+  .footer-note { text-align: center; font-size: 0.75rem; color: var(--ink-soft); margin-top: 18px; }
+  .auth-box { max-width: 340px; margin: 60px auto; }
+  .toggle-link { text-align: center; font-size: 0.85rem; color: var(--teal); cursor: pointer; margin-top: 10px; }
+  .error-text { color: var(--ochre); font-size: 0.82rem; margin: -6px 0 12px; }
+  .chart-wrap { position: relative; height: 200px; margin-bottom: 8px; }
+  .stat-line { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; }
+  .logout-link { font-size: 0.8rem; color: var(--ink-soft); cursor: pointer; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div id="authView" class="auth-box" style="display:none;">
+    <h1>Mis finanzas</h1>
+    <p class="sub" id="authSub">Inicia sesión con tu correo.</p>
+    <div class="card">
+      <label class="field" for="authEmail">Correo</label>
+      <input type="email" id="authEmail" placeholder="tu@correo.com">
+      <label class="field" for="authPass">Contraseña</label>
+      <input type="password" id="authPass" placeholder="••••••••">
+      <div class="error-text" id="authError" style="display:none;"></div>
+      <button class="primary" id="authSubmitBtn">Entrar</button>
+      <div class="toggle-link" id="authToggle">¿No tienes cuenta? Regístrate</div>
+    </div>
+  </div>
+
+  <div id="mainView" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div>
+        <h1>Mis finanzas</h1>
+        <p class="sub" style="margin-bottom:8px;">Tu progreso, en un solo lugar.</p>
+      </div>
+      <span class="logout-link" id="logoutBtn">Salir</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="inicio">Inicio</button>
+      <button class="tab-btn" data-tab="deudas">Deudas</button>
+      <button class="tab-btn" data-tab="gastos">Gastos fijos</button>
+      <button class="tab-btn" data-tab="cuentas">Cuentas</button>
+      <button class="tab-btn" data-tab="tarjetas">Tarjeta</button>
+      <button class="tab-btn" data-tab="stats">Stats</button>
+    </div>
+
+    <!-- INICIO -->
+    <div class="panel active" id="panel-inicio">
+      <div class="card" id="resumenCard">
+        <h2>Tu estado hoy</h2>
+        <div class="stat-line"><span>Deuda total restante</span><strong id="rDeuda">Q0</strong></div>
+        <div class="stat-line"><span>En tus cuentas (Q)</span><strong id="rCuentasQ">Q0</strong></div>
+        <div class="stat-line"><span>En tus cuentas ($)</span><strong id="rCuentasUSD">$0</strong></div>
+        <div class="stat-line"><span>Te sobra esta quincena (Q)</span><strong id="rSobra">Q0</strong></div>
+        <div class="stat-line"><span>Fecha de pago de tarjeta</span><strong id="rDiasPago">-</strong></div>
+        <div class="item-sub" id="rPrioridad" style="margin-top:8px;"></div>
+      </div>
+      <p class="sub">¿Qué pasó? Elige una opción y ya.</p>
+      <div class="card">
+        <button class="primary" id="btnShowIngreso">💰 Metí dinero a una cuenta</button>
+        <div id="formIngreso" style="display:none; margin-top:14px;">
+          <label class="field">¿Cuál cuenta?</label>
+          <select id="qCuenta"></select>
+          <div class="row2">
+            <div><label class="field">Monto</label><input type="number" id="qCuentaMonto"></div>
+            <div><label class="field">Fecha</label><input type="date" id="qCuentaFecha"></div>
+          </div>
+          <button class="primary" id="qCuentaSave">Guardar</button>
+        </div>
+      </div>
+      <div class="card">
+        <button class="primary" id="btnShowPago">💳 Pagué algo de una deuda</button>
+        <div id="formPago" style="display:none; margin-top:14px;">
+          <label class="field">¿Cuál deuda?</label>
+          <select id="qDeuda"></select>
+          <div class="row2">
+            <div><label class="field">Monto</label><input type="number" id="qDeudaMonto"></div>
+            <div><label class="field">Fecha</label><input type="date" id="qDeudaFecha"></div>
+          </div>
+          <button class="primary" id="qDeudaSave">Guardar</button>
+        </div>
+      </div>
+      <div class="card">
+        <button class="primary" id="btnShowCorte">📇 Actualicé mi tarjeta</button>
+        <div id="formCorte" style="display:none; margin-top:14px;">
+          <label class="field">¿Cuál tarjeta?</label>
+          <select id="qTarjeta"></select>
+          <div class="row2">
+            <div><label class="field">Saldo al corte</label><input type="number" id="qCorteSaldo"></div>
+            <div><label class="field">Pago mínimo</label><input type="number" id="qCortePMin"></div>
+          </div>
+          <div class="row2">
+            <div><label class="field">Pago contado</label><input type="number" id="qCortePContado"></div>
+            <div><label class="field">Moneda</label><select id="qCorteCurr"><option value="Q">Q</option><option value="$">$</option></select></div>
+          </div>
+          <label class="field">Fecha</label>
+          <input type="date" id="qCorteFecha">
+          <button class="primary" id="qCorteSave">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GASTOS FIJOS -->
+    <div class="panel" id="panel-gastos">
+      <div class="card">
+        <h2>Nuevo gasto fijo</h2>
+        <label class="field">Nombre</label>
+        <input type="text" id="gNombre" placeholder="Carro, Tennis, Medicamentos...">
+        <div class="row2">
+          <div><label class="field">Monto</label><input type="number" id="gMonto"></div>
+          <div><label class="field">Frecuencia</label>
+            <select id="gFrecuencia"><option value="quincenal">Quincenal</option><option value="mensual">Mensual</option></select>
+          </div>
+        </div>
+        <button class="primary" id="addGastoBtn">Agregar gasto fijo</button>
+      </div>
+      <div id="gastosList"></div>
+    </div>
+
+    <!-- DEUDAS -->
+    <div class="panel" id="panel-deudas">
+      <div class="card">
+        <h2>Nueva deuda</h2>
+        <label class="field">Nombre</label>
+        <input type="text" id="dNombre" placeholder="Extrafinanciamiento #50">
+        <label class="field">Descripción</label>
+        <input type="text" id="dDesc" placeholder="Opcional">
+        <div class="row2">
+          <div><label class="field">Monto aprobado (Q)</label><input type="number" id="dMonto"></div>
+          <div><label class="field">Tasa interés (%)</label><input type="number" id="dTasa"></div>
+        </div>
+        <div class="row2">
+          <div><label class="field">Pago mensual (Q)</label><input type="number" id="dPagoMensual"></div>
+          <div><label class="field">Cantidad cuotas</label><input type="number" id="dCantCuotas"></div>
+        </div>
+        <label class="field">Fecha inicio</label>
+        <input type="date" id="dFechaInicio">
+        <button class="primary" id="addDeudaBtn">Agregar deuda</button>
+      </div>
+      <div id="deudasList"></div>
+    </div>
+
+    <!-- CUENTAS -->
+    <div class="panel" id="panel-cuentas">
+      <div class="card">
+        <h2>Nueva cuenta</h2>
+        <div class="row2">
+          <div><label class="field">No. cuenta</label><input type="text" id="cNoCuenta"></div>
+          <div><label class="field">Tipo</label><input type="text" id="cTipo" placeholder="Monetaria, Ahorro..."></div>
+        </div>
+        <label class="field">Moneda</label>
+        <select id="cCurrency"><option value="Q">Q</option><option value="$">$</option></select>
+        <button class="primary" id="addCuentaBtn">Agregar cuenta</button>
+      </div>
+      <div id="cuentasList"></div>
+    </div>
+
+    <!-- TARJETAS -->
+    <div class="panel" id="panel-tarjetas">
+      <div class="card">
+        <h2>Nueva tarjeta</h2>
+        <label class="field">Nombre</label>
+        <input type="text" id="tNombre" placeholder="LifeMiles Platinum 9374">
+        <div class="row2">
+          <div><label class="field">Fecha corte</label><input type="text" id="tFechaCorte" placeholder="16"></div>
+          <div><label class="field">Fecha pago</label><input type="text" id="tFechaPago" placeholder="09"></div>
+        </div>
+        <button class="primary" id="addTarjetaBtn">Agregar tarjeta</button>
+      </div>
+      <div id="tarjetasList"></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="panel" id="panel-stats">
+      <div id="statsContent"></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://itfkqpzedlqrbhsilika.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0ZmtxcHplZGxxcmJoc2lsaWthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk2NDI2NDAsImV4cCI6MjEwNTIxODY0MH0.qGgyooF4CPUBnyUncHLJY-AvQInG70BQDtJN1hphP-o";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let isSignUp = false;
+let charts = {};
+let cacheDeudas = [], cacheCuentas = [], cacheTarjetas = [], cacheGastos = [], cacheGastosPagos = [];
+let cacheSaldosCuentas = [], cacheSaldosTarjeta = [];
+
+function fmt(n, sym) {
+  sym = sym || 'Q';
+  return sym + Number(n || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function showToast(msg, icon) {
+  const t = document.getElementById('toast');
+  t.textContent = (icon || '✅') + ' ' + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ---------- AUTH ----------
+const authView = document.getElementById('authView');
+const mainView = document.getElementById('mainView');
+const authError = document.getElementById('authError');
+const authToggle = document.getElementById('authToggle');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
+const authSub = document.getElementById('authSub');
+
+authToggle.addEventListener('click', () => {
+  isSignUp = !isSignUp;
+  authSubmitBtn.textContent = isSignUp ? 'Crear cuenta' : 'Entrar';
+  authToggle.textContent = isSignUp ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate';
+  authSub.textContent = isSignUp ? 'Crea tu cuenta con tu correo.' : 'Inicia sesión con tu correo.';
+  authError.style.display = 'none';
+});
+
+authSubmitBtn.addEventListener('click', async () => {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPass').value;
+  authError.style.display = 'none';
+  if (!email || !password) {
+    authError.textContent = 'Completa correo y contraseña.';
+    authError.style.display = 'block';
+    return;
+  }
+  try {
+    if (isSignUp) {
+      const { error } = await sb.auth.signUp({ email, password });
+      if (error) throw error;
+      showToast('Cuenta creada. Ya puedes usar la app.');
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    }
+    await checkSession();
+  } catch (e) {
+    authError.textContent = e.message || 'Algo salió mal.';
+    authError.style.display = 'block';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  location.reload();
+});
+
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    authView.style.display = 'none';
+    mainView.style.display = 'block';
+    await loadAll();
+  } else {
+    authView.style.display = 'block';
+    mainView.style.display = 'none';
+  }
+}
+
+// ---------- TABS ----------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'stats') renderStats();
+    if (btn.dataset.tab === 'inicio') renderInicio();
+  });
+});
+
+// ---------- GASTOS FIJOS ----------
+function currentPeriodKey(frecuencia, fecha) {
+  const d = new Date(fecha);
+  if (frecuencia === 'mensual') return d.getFullYear() + '-' + (d.getMonth()+1);
+  const half = d.getDate() <= 15 ? 'a' : 'b';
+  return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + half;
+}
+
+async function loadGastos() {
+  const { data: gastos } = await sb.from('gastos_fijos').select('*').order('id');
+  cacheGastos = gastos || [];
+  const { data: pagos } = await sb.from('gastos_fijos_pagos').select('*');
+  cacheGastosPagos = pagos || [];
+  const listEl = document.getElementById('gastosList');
+  listEl.innerHTML = '';
+  const hoy = todayStr();
+  const periodoHoy = {};
+  cacheGastos.forEach(g => { periodoHoy[g.id] = currentPeriodKey(g.frecuencia, hoy); });
+
+  cacheGastos.forEach(g => {
+    const pagadoEstePeriodo = cacheGastosPagos.some(p => p.id_gasto === g.id && currentPeriodKey(g.frecuencia, p.fecha) === periodoHoy[g.id]);
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" ${pagadoEstePeriodo ? 'checked' : ''} data-id="${g.id}" data-action="toggleGasto" style="width:20px; height:20px;">
+        <div style="flex:1;">
+          <div class="item-title" style="font-size:0.95rem;">${g.nombre}</div>
+          <div class="item-sub">${fmt(g.monto)} · ${g.frecuencia}</div>
+        </div>
+        <button class="danger-ghost small" data-id="${g.id}" data-action="delGasto">✕</button>
+      </div>
+    `;
+    listEl.appendChild(div);
+  });
+
+  listEl.querySelectorAll('[data-action="toggleGasto"]').forEach(cb => {
+    cb.addEventListener('change', async () => {
+      const id = parseInt(cb.dataset.id);
+      const g = cacheGastos.find(x => x.id === id);
+      const periodo = currentPeriodKey(g.frecuencia, hoy);
+      if (cb.checked) {
+        await sb.from('gastos_fijos_pagos').insert({ id_gasto: id, fecha: hoy });
+        showToast('Marcado como pagado.');
+      } else {
+        const pagoDeEstePeriodo = cacheGastosPagos.find(p => p.id_gasto === id && currentPeriodKey(g.frecuencia, p.fecha) === periodo);
+        if (pagoDeEstePeriodo) await sb.from('gastos_fijos_pagos').delete().eq('id', pagoDeEstePeriodo.id);
+        showToast('Desmarcado.');
+      }
+      loadGastos();
+      renderInicio();
+    });
+  });
+  listEl.querySelectorAll('[data-action="delGasto"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await sb.from('gastos_fijos_pagos').delete().eq('id_gasto', btn.dataset.id);
+      await sb.from('gastos_fijos').delete().eq('id', btn.dataset.id);
+      showToast('Gasto eliminado.');
+      loadGastos();
+    });
+  });
+}
+
+document.getElementById('addGastoBtn').addEventListener('click', async () => {
+  const nombre = document.getElementById('gNombre').value.trim();
+  if (!nombre) { showToast('Ponle un nombre.', '⚠️'); return; }
+  const payload = {
+    nombre,
+    monto: parseFloat(document.getElementById('gMonto').value) || 0,
+    frecuencia: document.getElementById('gFrecuencia').value
+  };
+  const { error } = await sb.from('gastos_fijos').insert(payload);
+  if (error) { showToast('No se pudo agregar.', '⚠️'); return; }
+  showToast('Gasto fijo agregado.');
+  document.getElementById('gNombre').value = '';
+  document.getElementById('gMonto').value = '';
+  loadGastos();
+  renderInicio();
+});
+
+// ---------- DEUDAS ----------
+async function syncDeudaRestante(idDeuda) {
+  const { data: deuda } = await sb.from('deudas').select('monto_aprobado, pago_mensual').eq('id', idDeuda).single();
+  if (!deuda) return;
+  const { data: pagos } = await sb.from('deudas_historical').select('monto_pagado').eq('id_deuda', idDeuda);
+  const totalPagado = (pagos || []).reduce((s, p) => s + (p.monto_pagado || 0), 0);
+  const restante = Math.max(0, (deuda.monto_aprobado || 0) - totalPagado);
+  const cuotasPendientes = deuda.pago_mensual > 0 ? Math.ceil(restante / deuda.pago_mensual) : 0;
+  await sb.from('deudas').update({ monto_restante: restante, cuotas_pendientes: cuotasPendientes }).eq('id', idDeuda);
+}
+
+async function loadDeudas() {
+  const { data: deudas, error } = await sb.from('deudas').select('*').order('id');
+  if (error) { showToast('Error cargando deudas', '⚠️'); return; }
+  cacheDeudas = deudas || [];
+  const { data: pagos } = await sb.from('deudas_historical').select('*');
+  const listEl = document.getElementById('deudasList');
+  listEl.innerHTML = '';
+  (deudas || []).forEach(d => {
+    const misPagos = (pagos || []).filter(p => p.id_deuda === d.id);
+    const totalPagado = misPagos.reduce((s, p) => s + (p.monto_pagado || 0), 0);
+    const restante = Math.max(0, (d.monto_aprobado || 0) - totalPagado);
+    const mesesRestantes = d.pago_mensual > 0 ? Math.ceil(restante / d.pago_mensual) : 0;
+    const pct = d.monto_aprobado > 0 ? Math.min(100, (totalPagado / d.monto_aprobado) * 100) : 0;
+
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div class="item-title">${d.nombre}</div>
+      <div class="item-sub">${d.tasa_interes || 0}% · ${fmt(d.pago_mensual)}/mes · faltan ~${mesesRestantes} meses</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="item-sub">${fmt(totalPagado)} pagado de ${fmt(d.monto_aprobado)} — ${fmt(restante)} restante</div>
+      <div class="row2">
+        <input type="number" placeholder="Monto del pago" id="pagoMonto-${d.id}">
+        <button class="primary small" data-id="${d.id}" data-action="addPago">+ Pago</button>
+      </div>
+      <div class="row2" style="margin-top:8px;">
+        <button class="ghost small" data-id="${d.id}" data-action="toggleEdit">Editar</button>
+        <button class="danger-ghost small" data-id="${d.id}" data-action="delDeuda">Eliminar</button>
+      </div>
+      <div id="editForm-${d.id}" style="display:none; margin-top:10px;">
+        <label class="field">Nombre</label>
+        <input type="text" id="eNombre-${d.id}" value="${d.nombre}">
+        <div class="row2">
+          <div><label class="field">Monto aprobado</label><input type="number" id="eMonto-${d.id}" value="${d.monto_aprobado || 0}"></div>
+          <div><label class="field">Tasa interés</label><input type="number" id="eTasa-${d.id}" value="${d.tasa_interes || 0}"></div>
+        </div>
+        <div class="row2">
+          <div><label class="field">Pago mensual</label><input type="number" id="ePagoMensual-${d.id}" value="${d.pago_mensual || 0}"></div>
+          <div><label class="field">Cant. cuotas</label><input type="number" id="eCantCuotas-${d.id}" value="${d.cantidad_cuotas || 0}"></div>
+        </div>
+        <button class="primary small" data-id="${d.id}" data-action="saveEdit">Guardar cambios</button>
+      </div>
+    `;
+    listEl.appendChild(div);
+  });
+
+  listEl.querySelectorAll('[data-action="toggleEdit"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const el = document.getElementById('editForm-' + btn.dataset.id);
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    });
+  });
+  listEl.querySelectorAll('[data-action="saveEdit"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.dataset.id);
+      const payload = {
+        nombre: document.getElementById('eNombre-' + id).value.trim(),
+        monto_aprobado: parseFloat(document.getElementById('eMonto-' + id).value) || 0,
+        tasa_interes: parseFloat(document.getElementById('eTasa-' + id).value) || 0,
+        pago_mensual: parseFloat(document.getElementById('ePagoMensual-' + id).value) || 0,
+        cantidad_cuotas: parseInt(document.getElementById('eCantCuotas-' + id).value) || 0
+      };
+      const { error } = await sb.from('deudas').update(payload).eq('id', id);
+      if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
+      await syncDeudaRestante(id);
+      showToast('Deuda actualizada.');
+      loadDeudas();
+    });
+  });
+
+  listEl.querySelectorAll('[data-action="addPago"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.dataset.id);
+      const montoEl = document.getElementById('pagoMonto-' + id);
+      const monto = parseFloat(montoEl.value);
+      if (!monto || monto <= 0) { showToast('Metele un monto válido.', '⚠️'); return; }
+      const { error } = await sb.from('deudas_historical').insert({ id_deuda: id, fecha: new Date().toISOString().slice(0,10), monto_pagado: monto });
+      if (error) { showToast('No se pudo guardar el pago.', '⚠️'); return; }
+      await syncDeudaRestante(id);
+      showToast('Pago registrado.');
+      loadDeudas();
+    });
+  });
+  listEl.querySelectorAll('[data-action="delDeuda"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await sb.from('deudas_historical').delete().eq('id_deuda', btn.dataset.id);
+      await sb.from('deudas').delete().eq('id', btn.dataset.id);
+      showToast('Deuda eliminada.');
+      loadDeudas();
+    });
+  });
+}
+
+document.getElementById('addDeudaBtn').addEventListener('click', async () => {
+  const nombre = document.getElementById('dNombre').value.trim();
+  if (!nombre) { showToast('Ponle un nombre a la deuda.', '⚠️'); return; }
+  const montoAprobado = parseFloat(document.getElementById('dMonto').value) || 0;
+  const cantCuotas = parseInt(document.getElementById('dCantCuotas').value) || 0;
+  const payload = {
+    nombre,
+    descripcion: document.getElementById('dDesc').value.trim(),
+    monto_aprobado: montoAprobado,
+    tasa_interes: parseFloat(document.getElementById('dTasa').value) || 0,
+    pago_mensual: parseFloat(document.getElementById('dPagoMensual').value) || 0,
+    cantidad_cuotas: cantCuotas,
+    monto_restante: montoAprobado,
+    cuotas_pendientes: cantCuotas,
+    fecha_inicio: document.getElementById('dFechaInicio').value || null,
+    temporalidad: 'mensual'
+  };
+  const { error } = await sb.from('deudas').insert(payload);
+  if (error) { showToast('No se pudo agregar.', '⚠️'); return; }
+  showToast('Deuda agregada.');
+  ['dNombre','dDesc','dMonto','dTasa','dPagoMensual','dCantCuotas','dFechaInicio'].forEach(id => document.getElementById(id).value = '');
+  loadDeudas();
+});
+
+// ---------- CUENTAS ----------
+async function loadCuentas() {
+  const { data: cuentas } = await sb.from('cuentas').select('*').order('id');
+  cacheCuentas = cuentas || [];
+  const { data: saldos } = await sb.from('saldos_cuentas').select('*').order('fecha', { ascending: false });
+  cacheSaldosCuentas = saldos || [];
+  const listEl = document.getElementById('cuentasList');
+  listEl.innerHTML = '';
+  (cuentas || []).forEach(c => {
+    const historial = (saldos || []).filter(s => s.id_cuenta === c.id).sort((a,b) => b.fecha.localeCompare(a.fecha));
+    const ultimoSaldo = historial[0];
+    const anterior = historial[1];
+    let deltaHtml = '';
+    if (ultimoSaldo && anterior) {
+      const delta = ultimoSaldo.monto - anterior.monto;
+      const label = delta < 0 ? 'Gastaste' : 'Te entró';
+      const color = delta < 0 ? '#A8562F' : '#3F6F63';
+      deltaHtml = `<div class="item-sub" style="color:${color};">${label} ${fmt(Math.abs(delta), c.currency)} desde el ${anterior.fecha}</div>`;
+    }
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div class="item-title">${c.tipo_cuenta || 'Cuenta'} ${c.no_cuenta || ''}</div>
+      <div class="item-sub">${c.currency} · Último saldo: ${ultimoSaldo ? fmt(ultimoSaldo.monto, c.currency) + ' (' + ultimoSaldo.fecha + ')' : 'sin registrar'}</div>
+      ${deltaHtml}
+      <div class="row2">
+        <input type="number" placeholder="Saldo de hoy" id="saldoMonto-${c.id}">
+        <button class="primary small" data-id="${c.id}" data-action="addSaldo">Guardar</button>
+      </div>
+      <button class="danger-ghost small" data-id="${c.id}" data-action="delCuenta" style="margin-top:8px;">Eliminar cuenta</button>
+    `;
+    listEl.appendChild(div);
+  });
+
+  listEl.querySelectorAll('[data-action="addSaldo"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const monto = parseFloat(document.getElementById('saldoMonto-' + id).value);
+      if (isNaN(monto)) { showToast('Metele un monto válido.', '⚠️'); return; }
+      const { error } = await sb.from('saldos_cuentas').insert({ id_cuenta: parseInt(id), monto, fecha: new Date().toISOString().slice(0,10) });
+      if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
+      showToast('Saldo guardado.');
+      loadCuentas();
+    });
+  });
+  listEl.querySelectorAll('[data-action="delCuenta"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await sb.from('saldos_cuentas').delete().eq('id_cuenta', btn.dataset.id);
+      await sb.from('cuentas').delete().eq('id', btn.dataset.id);
+      showToast('Cuenta eliminada.');
+      loadCuentas();
+    });
+  });
+}
+
+document.getElementById('addCuentaBtn').addEventListener('click', async () => {
+  const payload = {
+    no_cuenta: parseInt(document.getElementById('cNoCuenta').value) || null,
+    tipo_cuenta: document.getElementById('cTipo').value.trim(),
+    currency: document.getElementById('cCurrency').value
+  };
+  const { error } = await sb.from('cuentas').insert(payload);
+  if (error) { showToast('No se pudo agregar.', '⚠️'); return; }
+  showToast('Cuenta agregada.');
+  document.getElementById('cNoCuenta').value = '';
+  document.getElementById('cTipo').value = '';
+  loadCuentas();
+});
+
+// ---------- TARJETAS ----------
+async function loadTarjetas() {
+  const { data: tarjetas } = await sb.from('tarjetas').select('*').order('id');
+  cacheTarjetas = tarjetas || [];
+  const { data: saldos } = await sb.from('saldos').select('*').order('fecha', { ascending: false });
+  cacheSaldosTarjeta = saldos || [];
+  const listEl = document.getElementById('tarjetasList');
+  listEl.innerHTML = '';
+  (tarjetas || []).forEach(t => {
+    const ultimo = (saldos || []).find(s => s.id_tarjeta === t.id);
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div class="item-title">${t.nombre}</div>
+      <div class="item-sub">Corte: ${t.fecha_corte || '-'} · Pago: ${t.fecha_pago || '-'}</div>
+      <div class="item-sub">Último saldo al corte: ${ultimo ? fmt(ultimo.saldo_corte, ultimo.currency) + ' (' + ultimo.fecha + ')' : 'sin registrar'}</div>
+      <div class="row2">
+        <input type="number" placeholder="Saldo al corte" id="scorte-${t.id}">
+        <input type="number" placeholder="Pago mínimo" id="pmin-${t.id}">
+      </div>
+      <div class="row2">
+        <input type="number" placeholder="Pago contado" id="pcontado-${t.id}">
+        <select id="curr-${t.id}"><option value="Q">Q</option><option value="$">$</option></select>
+      </div>
+      <button class="primary small" data-id="${t.id}" data-action="addCorte">Guardar corte de hoy</button>
+      <button class="danger-ghost small" data-id="${t.id}" data-action="delTarjeta" style="margin-top:8px;">Eliminar tarjeta</button>
+    `;
+    listEl.appendChild(div);
+  });
+
+  listEl.querySelectorAll('[data-action="addCorte"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const payload = {
+        id_tarjeta: parseInt(id),
+        saldo_corte: parseFloat(document.getElementById('scorte-' + id).value) || 0,
+        pago_minimo: parseFloat(document.getElementById('pmin-' + id).value) || 0,
+        pago_contado: parseFloat(document.getElementById('pcontado-' + id).value) || 0,
+        currency: document.getElementById('curr-' + id).value,
+        fecha: new Date().toISOString().slice(0,10)
+      };
+      const { error } = await sb.from('saldos').insert(payload);
+      if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
+      showToast('Corte guardado.');
+      loadTarjetas();
+    });
+  });
+  listEl.querySelectorAll('[data-action="delTarjeta"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await sb.from('saldos').delete().eq('id_tarjeta', btn.dataset.id);
+      await sb.from('tarjetas').delete().eq('id', btn.dataset.id);
+      showToast('Tarjeta eliminada.');
+      loadTarjetas();
+    });
+  });
+}
+
+document.getElementById('addTarjetaBtn').addEventListener('click', async () => {
+  const nombre = document.getElementById('tNombre').value.trim();
+  if (!nombre) { showToast('Ponle un nombre.', '⚠️'); return; }
+  const payload = {
+    nombre,
+    fecha_corte: document.getElementById('tFechaCorte').value.trim(),
+    fecha_pago: document.getElementById('tFechaPago').value.trim()
+  };
+  const { error } = await sb.from('tarjetas').insert(payload);
+  if (error) { showToast('No se pudo agregar.', '⚠️'); return; }
+  showToast('Tarjeta agregada.');
+  document.getElementById('tNombre').value = '';
+  document.getElementById('tFechaCorte').value = '';
+  document.getElementById('tFechaPago').value = '';
+  loadTarjetas();
+});
+
+// ---------- STATS ----------
+function destroyChart(key) {
+  if (charts[key]) { charts[key].destroy(); delete charts[key]; }
+}
+
+async function renderStats() {
+  const el = document.getElementById('statsContent');
+  el.innerHTML = '<p class="sub">Cargando...</p>';
+
+  const { data: deudas } = await sb.from('deudas').select('*');
+  const { data: pagos } = await sb.from('deudas_historical').select('*').order('fecha');
+  const { data: cuentas } = await sb.from('cuentas').select('*');
+  const { data: saldosCuentas } = await sb.from('saldos_cuentas').select('*').order('fecha');
+  const { data: tarjetas } = await sb.from('tarjetas').select('*');
+  const { data: saldosTarjeta } = await sb.from('saldos').select('*').order('fecha');
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>Deuda total restante</h2>
+      <div class="chart-wrap"><canvas id="chartDeudaTotal"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Cada deuda por separado</h2>
+      <div class="chart-wrap"><canvas id="chartDeudaIndividual"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Tus cuentas en el tiempo</h2>
+      <div class="chart-wrap"><canvas id="chartCuentas"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Saldo de tarjeta en el tiempo</h2>
+      <div class="chart-wrap"><canvas id="chartTarjeta"></canvas></div>
+    </div>
+  `;
+
+  // Deuda total restante over time: for each pago date, compute cumulative restante across all deudas
+  const totalAprobado = (deudas || []).reduce((s, d) => s + (d.monto_aprobado || 0), 0);
+  const pagosSorted = (pagos || []).slice().sort((a,b) => a.fecha.localeCompare(b.fecha));
+  const fechas = [...new Set(pagosSorted.map(p => p.fecha))];
+  let acumulado = 0;
+  const restanteSeries = fechas.map(f => {
+    acumulado += pagosSorted.filter(p => p.fecha === f).reduce((s,p) => s + (p.monto_pagado||0), 0);
+    return totalAprobado - acumulado;
+  });
+  destroyChart('deudaTotal');
+  charts.deudaTotal = new Chart(document.getElementById('chartDeudaTotal'), {
+    type: 'line',
+    data: { labels: fechas.length ? fechas : ['hoy'], datasets: [{ label: 'Restante (Q)', data: fechas.length ? restanteSeries : [totalAprobado], borderColor: '#A8562F', backgroundColor: 'rgba(168,86,47,0.1)', fill: true, tension: 0.2 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+
+  // Individual deuda lines: each deuda's own restante over time, from its own payments
+  destroyChart('deudaIndividual');
+  const coloresDeuda = ['#3F6F63','#A8562F','#8FAF83','#5B6560','#7F77DD','#D4537E'];
+  const deudaIndividualDatasets = (deudas || []).map((d, i) => {
+    const misPagos = pagosSorted.filter(p => p.id_deuda === d.id);
+    let acc = 0;
+    const puntos = misPagos.map(p => {
+      acc += (p.monto_pagado || 0);
+      return { x: p.fecha, y: Math.max(0, (d.monto_aprobado || 0) - acc) };
+    });
+    if (puntos.length === 0) {
+      puntos.push({ x: new Date().toISOString().slice(0,10), y: d.monto_aprobado || 0 });
+    }
+    return { label: d.nombre, data: puntos, borderColor: coloresDeuda[i % coloresDeuda.length], tension: 0.2 };
+  });
+  charts.deudaIndividual = new Chart(document.getElementById('chartDeudaIndividual'), {
+    type: 'line',
+    data: { datasets: deudaIndividualDatasets },
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'category' } } }
+  });
+
+  // Cuentas: one line per cuenta over time
+  destroyChart('cuentas');
+  const cuentaDatasets = (cuentas || []).map((c, i) => {
+    const puntos = (saldosCuentas || []).filter(s => s.id_cuenta === c.id).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    const colores = ['#3F6F63','#A8562F','#8FAF83','#5B6560'];
+    return { label: (c.tipo_cuenta || 'Cuenta') + ' ' + (c.no_cuenta||''), data: puntos.map(p => ({x: p.fecha, y: p.monto})), borderColor: colores[i % colores.length], tension: 0.2 };
+  });
+  charts.cuentas = new Chart(document.getElementById('chartCuentas'), {
+    type: 'line',
+    data: { datasets: cuentaDatasets },
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'category' } } }
+  });
+
+  // Tarjeta saldo_corte over time
+  destroyChart('tarjeta');
+  const tarjetaDatasets = (tarjetas || []).map((t, i) => {
+    const puntos = (saldosTarjeta || []).filter(s => s.id_tarjeta === t.id).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    const colores = ['#A8562F','#3F6F63'];
+    return { label: t.nombre, data: puntos.map(p => ({x: p.fecha, y: p.saldo_corte})), borderColor: colores[i % colores.length], tension: 0.2 };
+  });
+  charts.tarjeta = new Chart(document.getElementById('chartTarjeta'), {
+    type: 'line',
+    data: { datasets: tarjetaDatasets },
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'category' } } }
+  });
+}
+
+// ---------- INICIO (quick add) ----------
+function populateSelect(selectEl, items, labelFn) {
+  selectEl.innerHTML = items.map(it => `<option value="${it.id}">${labelFn(it)}</option>`).join('');
+}
+function todayStr() { return new Date().toISOString().slice(0,10); }
+
+function renderInicio() {
+  populateSelect(document.getElementById('qCuenta'), cacheCuentas, c => (c.tipo_cuenta || 'Cuenta') + ' ' + (c.no_cuenta || ''));
+  populateSelect(document.getElementById('qDeuda'), cacheDeudas, d => d.nombre);
+  populateSelect(document.getElementById('qTarjeta'), cacheTarjetas, t => t.nombre);
+  document.getElementById('qCuentaFecha').value = todayStr();
+  document.getElementById('qDeudaFecha').value = todayStr();
+  document.getElementById('qCorteFecha').value = todayStr();
+
+  // Deuda total restante
+  const deudaTotal = cacheDeudas.reduce((s, d) => s + (d.monto_restante != null ? d.monto_restante : (d.monto_aprobado || 0)), 0);
+  document.getElementById('rDeuda').textContent = fmt(deudaTotal);
+
+  // Totales de cuentas por moneda (último saldo por cuenta)
+  let totalQ = 0, totalUSD = 0;
+  cacheCuentas.forEach(c => {
+    const ultimo = cacheSaldosCuentas.find(s => s.id_cuenta === c.id);
+    const monto = ultimo ? ultimo.monto : 0;
+    if (c.currency === '$') totalUSD += monto; else totalQ += monto;
+  });
+  document.getElementById('rCuentasQ').textContent = fmt(totalQ, 'Q');
+  document.getElementById('rCuentasUSD').textContent = fmt(totalUSD, '$');
+
+  // Sobra: cuentas en Q menos gastos fijos (Q) aún no marcados esta quincena/mes
+  const hoy = todayStr();
+  const gastosPendientesQ = cacheGastos.reduce((s, g) => {
+    const periodo = currentPeriodKey(g.frecuencia, hoy);
+    const yaPagado = cacheGastosPagos.some(p => p.id_gasto === g.id && currentPeriodKey(g.frecuencia, p.fecha) === periodo);
+    return yaPagado ? s : s + (g.monto || 0);
+  }, 0);
+  document.getElementById('rSobra').textContent = fmt(totalQ - gastosPendientesQ);
+
+  // Tarjeta: día de corte/pago
+  if (cacheTarjetas.length) {
+    const t = cacheTarjetas[0];
+    document.getElementById('rDiasPago').textContent = 'Día ' + (t.fecha_pago || '-') + ' (corte día ' + (t.fecha_corte || '-') + ')';
+  } else {
+    document.getElementById('rDiasPago').textContent = '-';
+  }
+
+  // Prioridad: deuda más chica con saldo pendiente
+  const pendientes = cacheDeudas.filter(d => (d.monto_restante != null ? d.monto_restante : d.monto_aprobado) > 0);
+  if (pendientes.length) {
+    const prioridad = pendientes.reduce((min, d) => {
+      const r = d.monto_restante != null ? d.monto_restante : d.monto_aprobado;
+      const rMin = min.monto_restante != null ? min.monto_restante : min.monto_aprobado;
+      return r < rMin ? d : min;
+    });
+    const rP = prioridad.monto_restante != null ? prioridad.monto_restante : prioridad.monto_aprobado;
+    document.getElementById('rPrioridad').textContent = '🎯 Ataca primero: ' + prioridad.nombre + ' (' + fmt(rP) + ' restante)';
+  } else {
+    document.getElementById('rPrioridad').textContent = pendientes.length === 0 && cacheDeudas.length ? '🎉 ¡No debes nada pendiente!' : '';
+  }
+}
+
+function toggleForm(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+document.getElementById('btnShowIngreso').addEventListener('click', () => toggleForm('formIngreso'));
+document.getElementById('btnShowPago').addEventListener('click', () => toggleForm('formPago'));
+document.getElementById('btnShowCorte').addEventListener('click', () => toggleForm('formCorte'));
+
+document.getElementById('qCuentaSave').addEventListener('click', async () => {
+  const idCuenta = parseInt(document.getElementById('qCuenta').value);
+  const monto = parseFloat(document.getElementById('qCuentaMonto').value);
+  const fecha = document.getElementById('qCuentaFecha').value || todayStr();
+  if (!idCuenta || isNaN(monto)) { showToast('Completa cuenta y monto.', '⚠️'); return; }
+  const { error } = await sb.from('saldos_cuentas').insert({ id_cuenta: idCuenta, monto, fecha });
+  if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
+  showToast('Saldo guardado.');
+  document.getElementById('qCuentaMonto').value = '';
+  loadCuentas();
+});
+
+document.getElementById('qDeudaSave').addEventListener('click', async () => {
+  const idDeuda = parseInt(document.getElementById('qDeuda').value);
+  const monto = parseFloat(document.getElementById('qDeudaMonto').value);
+  const fecha = document.getElementById('qDeudaFecha').value || todayStr();
+  if (!idDeuda || !monto || monto <= 0) { showToast('Completa deuda y monto.', '⚠️'); return; }
+  const { error } = await sb.from('deudas_historical').insert({ id_deuda: idDeuda, monto_pagado: monto, fecha });
+  if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
+  await syncDeudaRestante(idDeuda);
+  showToast('Pago registrado.');
+  document.getElementById('qDeudaMonto').value = '';
+  loadDeudas();
+});
+
+document.getElementById('qCorteSave').addEventListener('click', async () => {
+  const idTarjeta = parseInt(document.getElementById('qTarjeta').value);
+  const fecha = document.getElementById('qCorteFecha').value || todayStr();
+  const payload = {
+    id_tarjeta: idTarjeta,
+    saldo_corte: parseFloat(document.getElementById('qCorteSaldo').value) || 0,
+    pago_minimo: parseFloat(document.getElementById('qCortePMin').value) || 0,
+    pago_contado: parseFloat(document.getElementById('qCortePContado').value) || 0,
+    currency: document.getElementById('qCorteCurr').value,
+    fecha
+  };
+  if (!idTarjeta) { showToast('Elige una tarjeta.', '⚠️'); return; }
+  const { error } = await sb.from('saldos').insert(payload);
+  if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
+  showToast('Corte guardado.');
+  ['qCorteSaldo','qCortePMin','qCortePContado'].forEach(id => document.getElementById(id).value = '');
+  loadTarjetas();
+});
+
+async function loadAll() {
+  await loadDeudas();
+  await loadCuentas();
+  await loadTarjetas();
+  await loadGastos();
+  renderInicio();
+}
+
+checkSession();
+sb.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') checkSession();
+});
+</script>
+</body>
+</html>
