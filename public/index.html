@@ -203,7 +203,7 @@
           <div class="row2">
             <div><label class="field">Monto</label><input type="number" id="gMonto"></div>
             <div><label class="field">Frecuencia</label>
-              <select id="gFrecuencia"><option value="quincenal">Quincenal</option><option value="mensual">Mensual</option></select>
+              <select id="gFrecuencia"><option value="semanal">Semanal</option><option value="quincenal">Quincenal</option><option value="mensual">Mensual</option><option value="cuotas">Cuotas (sin reinicio automático)</option></select>
             </div>
           </div>
           <label class="field">¿De cuál cuenta sale este gasto?</label>
@@ -421,7 +421,14 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // ---------- GASTOS FIJOS ----------
 function currentPeriodKey(frecuencia, fecha) {
   const d = new Date(fecha);
+  if (frecuencia === 'cuotas') return 'sin-reinicio';
   if (frecuencia === 'mensual') return d.getFullYear() + '-' + (d.getMonth()+1);
+  if (frecuencia === 'semanal') {
+    const inicioAno = new Date(d.getFullYear(), 0, 1);
+    const dias = Math.floor((d - inicioAno) / (1000*60*60*24));
+    const semana = Math.floor(dias / 7);
+    return d.getFullYear() + '-sem' + semana;
+  }
   const half = d.getDate() <= 15 ? 'a' : 'b';
   return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + half;
 }
@@ -450,7 +457,7 @@ async function loadGastos() {
         <div style="flex:1;">
           <div class="item-title" style="font-size:0.95rem;">${g.nombre} ${cubierto ? '✅' : ''}</div>
           <div class="item-sub">Meta: ${fmt(g.monto)} · ${g.frecuencia}${g.id_cuenta ? ' · sale de ' + accountLabel(cacheCuentas.find(c => c.id === g.id_cuenta) || {}) : ''}</div>
-          <div class="item-sub" style="color:${cubierto ? 'var(--sage)' : 'var(--ink-soft)'};">Pagado esta ${g.frecuencia === 'quincenal' ? 'quincena' : 'mes'}: ${fmt(totalPagadoEstePeriodo)}</div>
+          <div class="item-sub" style="color:${cubierto ? 'var(--sage)' : 'var(--ink-soft)'};">${g.frecuencia === 'cuotas' ? 'Pagado en total' : 'Pagado est' + (g.frecuencia === 'semanal' ? 'a semana' : g.frecuencia === 'quincenal' ? 'a quincena' : 'e mes')}: ${fmt(totalPagadoEstePeriodo)}</div>
         </div>
         <button class="danger-ghost small" data-id="${g.id}" data-action="delGasto">✕</button>
       </div>
