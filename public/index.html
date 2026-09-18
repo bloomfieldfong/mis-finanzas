@@ -58,6 +58,8 @@
   button.primary.small { border-radius: 8px; }
   button.danger-ghost { background: transparent; color: var(--teal); border: 1px solid var(--teal); }
   button.icon-btn { width: 38px; padding: 0; flex-shrink: 0; margin-top: 0; }
+  button.icon-btn.ghost { color: var(--teal); }
+  button.icon-btn svg { width: 17px; height: 17px; }
   .quick-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   button.quick-action { height: auto; min-height: 88px; flex-direction: column; gap: 6px; background: var(--ochre-soft); color: var(--teal); border: 1px solid var(--line); padding: 12px 8px; }
   button.quick-action .qa-icon { font-size: 1.6rem; line-height: 1; }
@@ -808,8 +810,8 @@ async function loadCuentas() {
           <div class="item-sub">${c.tipo_cuenta || ''} ${c.no_cuenta ? '· No. ' + c.no_cuenta : ''}</div>
         </div>
         <div style="display:flex; gap:6px;">
-          <button class="ghost small icon-btn" style="margin-top:0" data-id="${c.id}" data-action="toggleEditCuenta" title="Editar apodo">✏️</button>
-          <button class="danger-ghost small icon-btn" data-id="${c.id}" data-action="delCuenta" title="Eliminar cuenta">🗑️</button>
+          <button class="ghost small icon-btn" style="margin-top:0" data-id="${c.id}" data-action="toggleEditCuenta" title="Editar apodo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l4 4"/></svg></button>
+          <button class="danger-ghost small icon-btn" data-id="${c.id}" data-action="delCuenta" title="Eliminar cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
         </div>
       </div>
       <div class="item-sub">${c.currency} · Último saldo: ${ultimoSaldo ? fmt(ultimoSaldo.monto, c.currency) + ' (' + ultimoSaldo.fecha + ')' : 'sin registrar'}</div>
