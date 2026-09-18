@@ -910,7 +910,7 @@ async function renderStats() {
     comboLabels.push(hoyCombo);
     comboData.push(manualRestanteHoy + autoRestanteHoy);
   }
-  const maxPendientes = autoDebts.length ? Math.max(...autoDebts.map(d => calcAutomatica(d).pendientes)) : 0;
+  const maxPendientes = Math.min(12, autoDebts.length ? Math.max(...autoDebts.map(d => calcAutomatica(d).pendientes)) : 0);
   for (let m = 1; m <= maxPendientes; m++) {
     const fecha = new Date(hoyCombo + 'T00:00:00');
     fecha.setMonth(fecha.getMonth() + m);
@@ -944,7 +944,7 @@ async function renderStats() {
     return d.temporalidad === 'quincenal' ? Math.ceil(cuotas / 2) : cuotas;
   };
   const aportePorMesDe = d => (d.temporalidad === 'quincenal' ? (d.pago_mensual || 0) * 2 : (d.pago_mensual || 0));
-  const maxMeses = (deudas || []).length ? Math.max(0, ...(deudas || []).map(mesesRestantesDe)) : 0;
+  const maxMeses = Math.min(12, (deudas || []).length ? Math.max(0, ...(deudas || []).map(mesesRestantesDe)) : 0);
   const cuotaLabels = [];
   const cuotaData = [];
   for (let m = 0; m <= maxMeses; m++) {
