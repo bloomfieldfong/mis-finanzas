@@ -440,35 +440,51 @@ async function loadGastos() {
   cacheGastos.forEach(g => { periodoHoy[g.id] = currentPeriodKey(g.frecuencia, hoy); });
 
   cacheGastos.forEach(g => {
-    const pagadoEstePeriodo = cacheGastosPagos.some(p => p.id_gasto === g.id && currentPeriodKey(g.frecuencia, p.fecha) === periodoHoy[g.id]);
+    const pagosEstePeriodo = cacheGastosPagos.filter(p => p.id_gasto === g.id && currentPeriodKey(g.frecuencia, p.fecha) === periodoHoy[g.id]);
+    const totalPagadoEstePeriodo = pagosEstePeriodo.reduce((s, p) => s + (p.monto != null ? p.monto : g.monto || 0), 0);
+    const cubierto = totalPagadoEstePeriodo >= (g.monto || 0);
     const div = document.createElement('div');
     div.className = 'item';
     div.innerHTML = `
       <div style="display:flex; align-items:center; gap:10px;">
-        <input type="checkbox" ${pagadoEstePeriodo ? 'checked' : ''} data-id="${g.id}" data-action="toggleGasto" style="width:20px; height:20px;">
         <div style="flex:1;">
-          <div class="item-title" style="font-size:0.95rem;">${g.nombre}</div>
-          <div class="item-sub">${fmt(g.monto)} · ${g.frecuencia}${g.id_cuenta ? ' · sale de ' + accountLabel(cacheCuentas.find(c => c.id === g.id_cuenta) || {}) : ''}</div>
+          <div class="item-title" style="font-size:0.95rem;">${g.nombre} ${cubierto ? '✅' : ''}</div>
+          <div class="item-sub">Meta: ${fmt(g.monto)} · ${g.frecuencia}${g.id_cuenta ? ' · sale de ' + accountLabel(cacheCuentas.find(c => c.id === g.id_cuenta) || {}) : ''}</div>
+          <div class="item-sub" style="color:${cubierto ? 'var(--sage)' : 'var(--ink-soft)'};">Pagado esta ${g.frecuencia === 'quincenal' ? 'quincena' : 'mes'}: ${fmt(totalPagadoEstePeriodo)}</div>
         </div>
         <button class="danger-ghost small" data-id="${g.id}" data-action="delGasto">✕</button>
       </div>
+      <div class="row2" style="margin-top:8px;">
+        <input type="number" placeholder="Monto (ej. una clase)" id="pagoGasto-${g.id}" value="${g.monto || ''}">
+        <button class="primary small" data-id="${g.id}" data-action="addPagoGasto">+ Agregar pago</button>
+      </div>
+      ${pagosEstePeriodo.length ? `<button class="ghost small" data-id="${g.id}" data-action="undoPagoGasto" style="margin-top:6px;">Deshacer último pago</button>` : ''}
     `;
     listEl.appendChild(div);
   });
 
-  listEl.querySelectorAll('[data-action="toggleGasto"]').forEach(cb => {
-    cb.addEventListener('change', async () => {
-      const id = parseInt(cb.dataset.id);
+  listEl.querySelectorAll('[data-action="addPagoGasto"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.dataset.id);
+      const monto = parseFloat(document.getElementById('pagoGasto-' + id).value);
+      if (!monto || monto <= 0) { showToast('Metele un monto válido.', '⚠️'); return; }
+      const restore = setSaving(btn, 'Guardando...');
+      const { error } = await sb.from('gastos_fijos_pagos').insert({ id_gasto: id, fecha: hoy, monto });
+      restore();
+      if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
+      showToast('Pago agregado.');
+      loadGastos();
+      renderInicio();
+    });
+  });
+  listEl.querySelectorAll('[data-action="undoPagoGasto"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.dataset.id);
       const g = cacheGastos.find(x => x.id === id);
-      const periodo = currentPeriodKey(g.frecuencia, hoy);
-      if (cb.checked) {
-        await sb.from('gastos_fijos_pagos').insert({ id_gasto: id, fecha: hoy });
-        showToast('Marcado como pagado.');
-      } else {
-        const pagoDeEstePeriodo = cacheGastosPagos.find(p => p.id_gasto === id && currentPeriodKey(g.frecuencia, p.fecha) === periodo);
-        if (pagoDeEstePeriodo) await sb.from('gastos_fijos_pagos').delete().eq('id', pagoDeEstePeriodo.id);
-        showToast('Desmarcado.');
-      }
+      const pagosEste = cacheGastosPagos.filter(p => p.id_gasto === id && currentPeriodKey(g.frecuencia, p.fecha) === periodoHoy[id]);
+      const ultimo = pagosEste[pagosEste.length - 1];
+      if (ultimo) await sb.from('gastos_fijos_pagos').delete().eq('id', ultimo.id);
+      showToast('Último pago deshecho.');
       loadGastos();
       renderInicio();
     });
@@ -1130,24 +1146,27 @@ function renderInicio() {
 
   // Sobra por cuenta: cada cuenta día a día, menos los gastos fijos pendientes asignados a ELLA
   const hoy = todayStr();
-  const gastosPendientes = cacheGastos.filter(g => {
+  const gastosPendientes = cacheGastos.map(g => {
     const periodo = currentPeriodKey(g.frecuencia, hoy);
-    return !cacheGastosPagos.some(p => p.id_gasto === g.id && currentPeriodKey(g.frecuencia, p.fecha) === periodo);
-  });
+    const pagadoEstePeriodo = cacheGastosPagos.filter(p => p.id_gasto === g.id && currentPeriodKey(g.frecuencia, p.fecha) === periodo)
+      .reduce((s, p) => s + (p.monto != null ? p.monto : g.monto || 0), 0);
+    const restante = Math.max(0, (g.monto || 0) - pagadoEstePeriodo);
+    return { ...g, restante };
+  }).filter(g => g.restante > 0);
   const diaADiaCuentasList = cacheCuentas.filter(c => c.currency !== '$' && !(c.tipo_cuenta || '').toLowerCase().includes('ahorro'));
   const sobraHtml = diaADiaCuentasList.map(c => {
     const ultimo = cacheSaldosCuentas.find(s => s.id_cuenta === c.id);
     const saldo = ultimo ? ultimo.monto : 0;
     const gastosDeEstaCuenta = gastosPendientes.filter(g => g.id_cuenta === c.id);
-    const totalGastos = gastosDeEstaCuenta.reduce((s, g) => s + (g.monto || 0), 0);
+    const totalGastos = gastosDeEstaCuenta.reduce((s, g) => s + g.restante, 0);
     const queda = saldo - totalGastos;
-    const detalle = gastosDeEstaCuenta.length ? gastosDeEstaCuenta.map(g => g.nombre + ' (' + fmt(g.monto || 0) + ')').join(', ') : 'sin gastos pendientes asignados';
+    const detalle = gastosDeEstaCuenta.length ? gastosDeEstaCuenta.map(g => g.nombre + ' (falta ' + fmt(g.restante) + ')').join(', ') : 'sin gastos pendientes asignados';
     return `<div class="stat-line"><span>${accountLabel(c)}</span><strong>${fmt(saldo)}</strong></div>
       <div class="item-sub" style="margin:-2px 0 8px;">📋 ${detalle}${gastosDeEstaCuenta.length ? ' → te queda ' + fmt(queda) : ''}</div>`;
   }).join('');
   const sinAsignar = gastosPendientes.filter(g => !g.id_cuenta);
   const sinAsignarHtml = sinAsignar.length
-    ? `<div class="item-sub" style="margin-top:4px;">⚠️ Sin cuenta asignada: ${sinAsignar.map(g => g.nombre + ' (' + fmt(g.monto || 0) + ')').join(', ')}</div>`
+    ? `<div class="item-sub" style="margin-top:4px;">⚠️ Sin cuenta asignada: ${sinAsignar.map(g => g.nombre + ' (falta ' + fmt(g.restante) + ')').join(', ')}</div>`
     : '';
   document.getElementById('rSobraPorCuenta').innerHTML = sobraHtml + sinAsignarHtml;
 
