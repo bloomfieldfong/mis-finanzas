@@ -858,6 +858,10 @@ async function renderStats() {
       <div class="chart-wrap"><canvas id="chartDeudaTotal"></canvas></div>
     </div>
     <div class="card">
+      <h2>Cuánto pagas al mes (según se van terminando cuotas)</h2>
+      <div class="chart-wrap"><canvas id="chartCuotaMensual"></canvas></div>
+    </div>
+    <div class="card">
       <h2>Tus cuentas en el tiempo</h2>
       <div class="chart-wrap"><canvas id="chartCuentas"></canvas></div>
     </div>
@@ -911,6 +915,32 @@ async function renderStats() {
   charts.deudaTotal = new Chart(document.getElementById('chartDeudaTotal'), {
     type: 'line',
     data: { labels: comboLabels, datasets: [{ label: 'Restante (Q)', data: comboData, borderColor: '#CC7178', backgroundColor: 'rgba(204,113,120,0.12)', fill: true, tension: 0.2 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+
+  // Cuánto pagas al mes: cada deuda aporta su pago_mensual mientras le queden cuotas
+  const mesesRestantesDe = d => {
+    if (d.tipo === 'automatica') return calcAutomatica(d).pendientes;
+    const misPagos = pagosSorted.filter(p => p.id_deuda === d.id);
+    const totalPagado = misPagos.reduce((s, p) => s + (p.monto_pagado || 0), 0);
+    const restanteD = Math.max(0, (d.monto_aprobado || 0) - totalPagado);
+    return d.pago_mensual > 0 ? Math.ceil(restanteD / d.pago_mensual) : 0;
+  };
+  const maxMeses = (deudas || []).length ? Math.max(0, ...(deudas || []).map(mesesRestantesDe)) : 0;
+  const cuotaLabels = [];
+  const cuotaData = [];
+  for (let m = 0; m <= maxMeses; m++) {
+    const fecha = new Date(hoyCombo + 'T00:00:00');
+    fecha.setMonth(fecha.getMonth() + m);
+    const totalMes = (deudas || []).reduce((s, d) => s + (m < mesesRestantesDe(d) ? (d.pago_mensual || 0) : 0), 0);
+    cuotaLabels.push(fecha.toISOString().slice(0,10));
+    cuotaData.push(totalMes);
+  }
+  if (cuotaLabels.length === 0) { cuotaLabels.push('hoy'); cuotaData.push(0); }
+  destroyChart('cuotaMensual');
+  charts.cuotaMensual = new Chart(document.getElementById('chartCuotaMensual'), {
+    type: 'line',
+    data: { labels: cuotaLabels, datasets: [{ label: 'Pago mensual total (Q)', data: cuotaData, borderColor: '#6B8F5A', backgroundColor: 'rgba(107,143,90,0.12)', fill: true, stepped: 'before', tension: 0 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
 
