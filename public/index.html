@@ -39,9 +39,11 @@
   h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.05rem; margin: 0 0 12px; }
   .sub { color: var(--ink-soft); font-size: 0.88rem; margin: 0 0 18px; line-height: 1.5; }
   .tabs { display: flex; gap: 6px; margin-bottom: 20px; background: rgba(255,255,255,0.35); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); padding: 4px; border-radius: 11px; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.5); }
-  .tab-btn { flex: 1; background: transparent; border: none; padding: 10px 4px; font-family: 'Inter'; font-weight: 600; font-size: 0.82rem; color: var(--ink-soft); border-radius: 8px; cursor: pointer; }
+  .tab-btn { flex: 1; background: transparent; border: none; padding: 10px 4px; font-family: 'Inter'; font-weight: 600; font-size: 0.82rem; color: var(--ink-soft); border-radius: 8px; cursor: pointer; transition: background-color 0.25s ease, color 0.25s ease; }
   .tab-btn.active { background: var(--card); color: var(--ink); }
   .panel { display: none; }
+  .panel.active { display: block; animation: fadeInTab 0.28s ease; }
+  @keyframes fadeInTab { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .panel.active { display: block; }
   .card { background: rgba(255,255,255,0.55); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(255,255,255,0.5); border-radius: 18px; padding: 22px 20px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(137,2,62,0.08), inset 0 1px 0 rgba(255,255,255,0.6); }
   .collapsible { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 0.35s ease, opacity 0.3s ease, margin-top 0.35s ease; margin-top: 0; }
@@ -189,6 +191,20 @@
           <label class="field">Fecha</label>
           <input type="date" id="qCorteFecha">
           <button class="primary" id="qCorteSave">Guardar</button>
+        </div>
+      </div>
+      <div class="card">
+        <button class="primary" id="btnShowMovimiento">🔄 Moví dinero entre mis cuentas</button>
+        <div id="formMovimiento" class="collapsible">
+          <label class="field">¿De cuál cuenta sale?</label>
+          <select id="qMovOrigen"></select>
+          <label class="field">¿A cuál cuenta entra?</label>
+          <select id="qMovDestino"></select>
+          <div class="row2">
+            <div><label class="field">Monto</label><input type="number" id="qMovMonto"></div>
+            <div><label class="field">Fecha</label><input type="date" id="qMovFecha"></div>
+          </div>
+          <button class="primary" id="qMovSave">Guardar movimiento</button>
         </div>
       </div>
     </div>
@@ -1145,9 +1161,12 @@ function renderInicio() {
   populateSelect(document.getElementById('qCuenta'), cacheCuentas, c => accountLabel(c));
   populateSelect(document.getElementById('qDeuda'), cacheDeudas.filter(d => d.tipo !== 'automatica'), d => d.nombre);
   populateSelect(document.getElementById('qTarjeta'), cacheTarjetas, t => t.nombre);
+  populateSelect(document.getElementById('qMovOrigen'), cacheCuentas, c => accountLabel(c));
+  populateSelect(document.getElementById('qMovDestino'), cacheCuentas, c => accountLabel(c));
   document.getElementById('qCuentaFecha').value = todayStr();
   document.getElementById('qDeudaFecha').value = todayStr();
   document.getElementById('qCorteFecha').value = todayStr();
+  document.getElementById('qMovFecha').value = todayStr();
 
   // Deuda total restante
   const hoyResumen = todayStr();
@@ -1212,7 +1231,7 @@ function renderInicio() {
       const saldoActual = Math.max(0, saldoDiaBase - totalPagado);
       document.getElementById('rTarjetaSaldo').textContent = fmt(saldoActual);
       document.getElementById('rTarjetaSaldoUSD').textContent = fmt(ultimoSaldo.saldo_dia_usd || ultimoSaldo.saldo_corte_usd || 0, '$');
-      document.getElementById('rPagoMinimo').innerHTML = `<div style="background:var(--ochre); color:#fff; padding:12px 14px; border-radius:12px; font-weight:600; font-size:0.9rem; box-shadow:0 3px 10px rgba(204,113,120,0.35); animation:pulseAlert 2s ease-in-out infinite;">🚨 ¡Ojo! El día ${t.fecha_pago || '-'} debes pagar mínimo: ${fmt(ultimoSaldo.pago_minimo || 0)} + ${fmt(ultimoSaldo.pago_minimo_usd || 0, '$')}</div>`;
+      document.getElementById('rPagoMinimo').innerHTML = `<div style="background:var(--ochre); color:#fff; padding:12px 14px; border-radius:12px; font-weight:600; font-size:0.9rem; box-shadow:0 3px 10px rgba(204,113,120,0.35);">🚨 ¡Ojo! El día ${t.fecha_pago || '-'} debes pagar mínimo: ${fmt(ultimoSaldo.pago_minimo || 0)} + ${fmt(ultimoSaldo.pago_minimo_usd || 0, '$')}</div>`;
     } else {
       document.getElementById('rTarjetaSaldo').textContent = 'sin registrar';
       document.getElementById('rPagoMinimo').innerHTML = '';
@@ -1246,6 +1265,7 @@ document.getElementById('btnShowNuevaCuenta').addEventListener('click', () => to
 document.getElementById('btnShowNuevaTarjeta').addEventListener('click', () => toggleForm('formNuevaTarjeta'));
 document.getElementById('btnShowPago').addEventListener('click', () => toggleForm('formPago'));
 document.getElementById('btnShowCorte').addEventListener('click', () => toggleForm('formCorte'));
+document.getElementById('btnShowMovimiento').addEventListener('click', () => toggleForm('formMovimiento'));
 
 document.getElementById('qCuentaSave').addEventListener('click', async () => {
   const idCuenta = parseInt(document.getElementById('qCuenta').value);
@@ -1293,6 +1313,30 @@ document.getElementById('qCorteSave').addEventListener('click', async () => {
   showToast('Corte guardado.');
   ['qCorteSaldo','qCorteSaldoUSD','qCorteSaldoDia','qCorteSaldoDiaUSD','qCortePMin','qCortePMinUSD','qCortePContado','qCortePContadoUSD'].forEach(id => document.getElementById(id).value = '');
   loadTarjetas();
+});
+
+document.getElementById('qMovSave').addEventListener('click', async () => {
+  const idOrigen = parseInt(document.getElementById('qMovOrigen').value);
+  const idDestino = parseInt(document.getElementById('qMovDestino').value);
+  const monto = parseFloat(document.getElementById('qMovMonto').value);
+  const fecha = document.getElementById('qMovFecha').value || todayStr();
+  if (!idOrigen || !idDestino) { showToast('Elige ambas cuentas.', '⚠️'); return; }
+  if (idOrigen === idDestino) { showToast('Elige dos cuentas distintas.', '⚠️'); return; }
+  if (!monto || monto <= 0) { showToast('Metele un monto válido.', '⚠️'); return; }
+  const btnEl = document.getElementById('qMovSave');
+  const restore = setSaving(btnEl);
+  const saldoOrigen = cacheSaldosCuentas.find(s => s.id_cuenta === idOrigen);
+  const saldoDestino = cacheSaldosCuentas.find(s => s.id_cuenta === idDestino);
+  const actualOrigen = saldoOrigen ? saldoOrigen.monto : 0;
+  const actualDestino = saldoDestino ? saldoDestino.monto : 0;
+  await sb.from('saldos_cuentas').insert({ id_cuenta: idOrigen, monto: actualOrigen - monto, fecha });
+  await sb.from('saldos_cuentas').insert({ id_cuenta: idDestino, monto: actualDestino + monto, fecha });
+  restore();
+  showToast('Movimiento registrado.');
+  document.getElementById('qMovMonto').value = '';
+  document.getElementById('formMovimiento').classList.remove('open');
+  loadCuentas();
+  renderInicio();
 });
 
 async function loadAll() {
