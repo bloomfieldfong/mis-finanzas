@@ -16,42 +16,48 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #F3E1DD; --card: #FFFFFF; --ink: #4A0A28; --ink-soft: #8C5A63;
-    --teal: #89023E; --teal-dark: #6B0230; --sage: #6B8F5A; --ochre: #CC7178;
-    --ochre-soft: #FFD9DA; --line: #E8C9C2; --chip-bg: #F3D5CE;
+    --bg: #F1F2F5; --card: #FFFFFF; --ink: #201A24; --ink-soft: #6B7280;
+    --teal: #89023E; --teal-dark: #6B0230; --sage: #2FA36B; --ochre: #E0577A;
+    --ochre-soft: #FDE7EC; --line: #E7E8EC; --chip-bg: #F1F2F5;
     --acc-blue: #4E7FDB; --acc-gold: #E0A72E; --acc-purple: #9B7BD1;
     --acc-teal: #3FB6B0; --acc-orange: #EF9351; --acc-pink: #E0577A;
     --acc-green: #4CAF7D; --acc-grey: #9C8B93;
+    --shadow-card: 0 1px 2px rgba(20,20,30,0.04), 0 4px 14px rgba(20,20,30,0.06);
+    --shadow-soft: 0 1px 3px rgba(20,20,30,0.05);
   }
   .badge-icon { width: 44px; height: 44px; border-radius: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .badge-icon svg { width: 22px; height: 22px; stroke: #fff; }
   .badge-icon.round { border-radius: 50%; }
   :root:not([data-theme="light"]) {
     @media (prefers-color-scheme: dark) {
-      --bg: #2A0F1A; --card: #3A1624; --ink: #F3E1DD; --ink-soft: #CC9AA3;
-      --teal: #E38DA3; --teal-dark: #CC7178; --sage: #A8C795; --ochre: #E39F6B;
-      --ochre-soft: #4A2530; --line: #5A2E3D; --chip-bg: #3A1624;
+      --bg: #17151A; --card: #221F26; --ink: #F1EEF4; --ink-soft: #9C97A6;
+      --teal: #E585A0; --teal-dark: #CC7178; --sage: #6BC79A; --ochre: #E8879C;
+      --ochre-soft: #3A2530; --line: #322E38; --chip-bg: #221F26;
+      --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 4px 14px rgba(0,0,0,0.35);
+      --shadow-soft: 0 1px 3px rgba(0,0,0,0.3);
     }
   }
   :root[data-theme="dark"] {
-    --bg: #2A0F1A; --card: #3A1624; --ink: #F3E1DD; --ink-soft: #CC9AA3;
-    --teal: #E38DA3; --teal-dark: #CC7178; --sage: #A8C795; --ochre: #E39F6B;
-    --ochre-soft: #4A2530; --line: #5A2E3D; --chip-bg: #3A1624;
+    --bg: #17151A; --card: #221F26; --ink: #F1EEF4; --ink-soft: #9C97A6;
+    --teal: #E585A0; --teal-dark: #CC7178; --sage: #6BC79A; --ochre: #E8879C;
+    --ochre-soft: #3A2530; --line: #322E38; --chip-bg: #221F26;
+    --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 4px 14px rgba(0,0,0,0.35);
+    --shadow-soft: 0 1px 3px rgba(0,0,0,0.3);
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
   .wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px 60px; }
-  h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.5rem; margin: 0 0 4px; }
-  h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.05rem; margin: 0 0 12px; }
+  h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.5rem; margin: 0 0 4px; color: var(--ink); }
+  h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.05rem; margin: 0 0 12px; color: var(--ink); }
   .sub { color: var(--ink-soft); font-size: 0.88rem; margin: 0 0 18px; line-height: 1.5; }
-  .tabs { display: flex; gap: 6px; margin-bottom: 20px; background: rgba(255,255,255,0.35); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); padding: 4px; border-radius: 11px; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.5); }
-  .tab-btn { flex: 1; background: transparent; border: none; padding: 10px 4px; font-family: 'Inter'; font-weight: 600; font-size: 0.82rem; color: var(--ink-soft); border-radius: 8px; cursor: pointer; transition: background-color 0.25s ease, color 0.25s ease; }
-  .tab-btn.active { background: var(--card); color: var(--ink); }
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--chip-bg); padding: 4px; border-radius: 12px; }
+  .tab-btn { flex: 1; background: transparent; border: none; padding: 10px 4px; font-family: 'Inter'; font-weight: 600; font-size: 0.82rem; color: var(--ink-soft); border-radius: 9px; cursor: pointer; transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease; }
+  .tab-btn.active { background: var(--card); color: var(--ink); box-shadow: var(--shadow-soft); }
   .panel { display: none; }
   .panel.active { display: block; animation: fadeInTab 0.28s ease; }
   @keyframes fadeInTab { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .panel.active { display: block; }
-  .card { background: rgba(255,255,255,0.55); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(255,255,255,0.5); border-radius: 18px; padding: 22px 20px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(137,2,62,0.08), inset 0 1px 0 rgba(255,255,255,0.6); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px 20px; margin-bottom: 16px; box-shadow: var(--shadow-card); }
   .collapsible { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 0.35s ease, opacity 0.3s ease, margin-top 0.35s ease; margin-top: 0; }
   .collapsible.open { max-height: 1400px; opacity: 1; margin-top: 14px; }
   label.field { display: block; font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 5px; }
@@ -67,20 +73,20 @@
   button.icon-btn.ghost { color: var(--teal); }
   button.icon-btn svg { width: 17px; height: 17px; }
   .quick-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  button.quick-action { height: auto; min-height: 88px; flex-direction: column; gap: 6px; background: var(--ochre-soft); color: var(--teal); border: 1px solid var(--line); padding: 12px 8px; }
+  button.quick-action { height: auto; min-height: 88px; flex-direction: column; gap: 6px; background: var(--bg); color: var(--teal); border: 1px solid var(--line); padding: 12px 8px; }
   button.quick-action .qa-icon { line-height: 1; }
   button.quick-action .qa-icon svg { width: 26px; height: 26px; }
   button.quick-action .qa-label { font-size: 0.78rem; font-weight: 600; line-height: 1.25; text-align: center; white-space: normal; }
   button.quick-action.active { background: var(--teal); color: #fff; border-color: var(--teal); }
-  .item { border: 1px solid rgba(255,255,255,0.5); border-radius: 12px; padding: 14px; margin-bottom: 10px; background: rgba(255,255,255,0.4); backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%); box-shadow: 0 2px 8px rgba(137,2,62,0.06), inset 0 1px 0 rgba(255,255,255,0.4); }
-  .item-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
+  .item { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; background: var(--card); box-shadow: var(--shadow-card); }
+  .item-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1rem; margin-bottom: 4px; color: var(--ink); }
   .item-sub { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 10px; }
-  .bar-track { height: 10px; background: var(--ochre-soft); border-radius: 999px; overflow: hidden; margin: 6px 0; }
+  .bar-track { height: 10px; background: var(--chip-bg); border-radius: 999px; overflow: hidden; margin: 6px 0; }
   .bar-fill { height: 100%; background: var(--sage); border-radius: 999px; }
   .row2 { display: flex; gap: 8px; }
   .row2 > * { flex: 1; }
   .row2 > input, .row2 > select, .row2 > button { height: 42px; box-sizing: border-box; }
-  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--teal-dark); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; max-width: 90%; text-align: center; z-index: 50; }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--teal-dark); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; max-width: 90%; text-align: center; z-index: 50; box-shadow: 0 6px 20px rgba(0,0,0,0.18); }
   .toast.show { opacity: 1; pointer-events: auto; }
   .footer-note { text-align: center; font-size: 0.75rem; color: var(--ink-soft); margin-top: 18px; }
   .auth-box { max-width: 340px; margin: 60px auto; }
@@ -89,9 +95,9 @@
   .chart-wrap { position: relative; height: 200px; margin-bottom: 8px; }
   .stat-line { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; }
   .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-  .metric-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .metric-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: var(--shadow-card); }
   .metric-card .metric-label { font-size: 0.76rem; color: var(--ink-soft); margin-bottom: 4px; }
-  .metric-card .metric-value { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.25rem; }
+  .metric-card .metric-value { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.25rem; color: var(--ink); }
   .metric-card .metric-sub { font-size: 0.72rem; color: var(--ink-soft); margin-top: 2px; }
   .logout-link { font-size: 0.8rem; color: var(--ink-soft); cursor: pointer; text-decoration: underline; }
   @keyframes pulseAlert { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
@@ -870,7 +876,7 @@ async function loadCuentas() {
     if (ultimoSaldo && anterior) {
       const delta = ultimoSaldo.monto - anterior.monto;
       const label = delta < 0 ? 'Gastaste' : 'Te entró';
-      const color = delta < 0 ? '#CC7178' : '#89023E';
+      const color = delta < 0 ? 'var(--ochre)' : 'var(--teal)';
       deltaHtml = `<div class="item-sub" style="color:${color};">${label} ${fmt(Math.abs(delta), c.currency)} desde el ${anterior.fecha}</div>`;
     }
     const div = document.createElement('div');
@@ -1166,7 +1172,7 @@ async function renderStats() {
   destroyChart('deudaTotal');
   charts.deudaTotal = new Chart(document.getElementById('chartDeudaTotal'), {
     type: 'line',
-    data: { labels: comboLabels, datasets: [{ label: 'Restante (Q)', data: comboData, borderColor: '#CC7178', backgroundColor: 'rgba(204,113,120,0.12)', fill: true, tension: 0.2 }] },
+    data: { labels: comboLabels, datasets: [{ label: 'Restante (Q)', data: comboData, borderColor: '#E0577A', backgroundColor: 'rgba(224,87,122,0.12)', fill: true, tension: 0.2 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
 
@@ -1204,7 +1210,7 @@ async function renderStats() {
   // Cuentas: día a día vs ahorros, en gráficas separadas
   destroyChart('cuentas');
   destroyChart('ahorros');
-  const coloresCuentas = ['#89023E','#CC7178','#6B8F5A','#8C5A63'];
+  const coloresCuentas = ['#89023E','#E0577A','#2FA36B','#4E7FDB'];
   const diaADiaCuentas = (cuentas || []).filter(c => !(c.tipo_cuenta || '').toLowerCase().includes('ahorro'));
   const ahorroCuentas = (cuentas || []).filter(c => (c.tipo_cuenta || '').toLowerCase().includes('ahorro'));
   const diaADiaDatasets = diaADiaCuentas.map((c, i) => {
@@ -1239,7 +1245,7 @@ async function renderStats() {
   // Tarjeta: saldo al día en el tiempo, Q y $ en gráficas separadas
   destroyChart('tarjeta');
   destroyChart('tarjetaUSD');
-  const coloresTarjeta = ['#CC7178', '#89023E', '#6B8F5A', '#8C5A63'];
+  const coloresTarjeta = ['#E0577A', '#89023E', '#2FA36B', '#4E7FDB'];
   const tarjetaDatasetsQ = [];
   const tarjetaDatasetsUSD = [];
   (tarjetas || []).forEach((t, i) => {
@@ -1355,7 +1361,7 @@ function renderInicio() {
       const saldoActual = Math.max(0, saldoDiaBase - totalPagado);
       document.getElementById('rTarjetaSaldo').textContent = fmt(saldoActual);
       document.getElementById('rTarjetaSaldoUSD').textContent = fmt(ultimoSaldo.saldo_dia_usd || ultimoSaldo.saldo_corte_usd || 0, '$');
-      document.getElementById('rPagoMinimo').innerHTML = `<div style="background:var(--ochre); color:#fff; padding:12px 14px; border-radius:12px; font-weight:600; font-size:0.9rem; box-shadow:0 3px 10px rgba(204,113,120,0.35);"><svg width="17" height="17" viewBox="0 0 24 24" style="vertical-align:-3px"><circle cx="12" cy="12" r="10" fill="#fff"/><rect x="11" y="6" width="2" height="8" fill="var(--ochre)"/><rect x="11" y="16" width="2" height="2" fill="var(--ochre)"/></svg> El día ${t.fecha_pago || '-'} debes pagar mínimo: ${fmt(ultimoSaldo.pago_minimo || 0)} + ${fmt(ultimoSaldo.pago_minimo_usd || 0, '$')}</div>`;
+      document.getElementById('rPagoMinimo').innerHTML = `<div style="background:var(--ochre); color:#fff; padding:12px 14px; border-radius:12px; font-weight:600; font-size:0.9rem; box-shadow:0 3px 10px rgba(224,87,122,0.35);"><svg width="17" height="17" viewBox="0 0 24 24" style="vertical-align:-3px"><circle cx="12" cy="12" r="10" fill="#fff"/><rect x="11" y="6" width="2" height="8" fill="var(--ochre)"/><rect x="11" y="16" width="2" height="2" fill="var(--ochre)"/></svg> El día ${t.fecha_pago || '-'} debes pagar mínimo: ${fmt(ultimoSaldo.pago_minimo || 0)} + ${fmt(ultimoSaldo.pago_minimo_usd || 0, '$')}</div>`;
     } else {
       document.getElementById('rTarjetaSaldo').textContent = 'sin registrar';
       document.getElementById('rPagoMinimo').innerHTML = '';
