@@ -873,8 +873,12 @@ async function renderStats() {
       <div class="chart-wrap"><canvas id="chartCuentas"></canvas></div>
     </div>
     <div class="card">
-      <h2>Saldo de tarjeta en el tiempo</h2>
+      <h2>Saldo de tarjeta en el tiempo (Q)</h2>
       <div class="chart-wrap"><canvas id="chartTarjeta"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Saldo de tarjeta en el tiempo ($)</h2>
+      <div class="chart-wrap"><canvas id="chartTarjetaUSD"></canvas></div>
     </div>
   `;
 
@@ -935,28 +939,35 @@ async function renderStats() {
     options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'category' } } }
   });
 
-  // Tarjeta: saldo al día en el tiempo, Q y $ como líneas separadas
+  // Tarjeta: saldo al día en el tiempo, Q y $ en gráficas separadas
   destroyChart('tarjeta');
+  destroyChart('tarjetaUSD');
   const coloresTarjeta = ['#CC7178', '#89023E', '#6B8F5A', '#8C5A63'];
-  const tarjetaDatasets = [];
+  const tarjetaDatasetsQ = [];
+  const tarjetaDatasetsUSD = [];
   (tarjetas || []).forEach((t, i) => {
     const puntos = (saldosTarjeta || []).filter(s => s.id_tarjeta === t.id).sort((a,b)=>a.fecha.localeCompare(b.fecha));
-    tarjetaDatasets.push({
-      label: t.nombre + ' (Q)',
+    tarjetaDatasetsQ.push({
+      label: t.nombre,
       data: puntos.map(p => ({x: p.fecha, y: (p.saldo_dia || p.saldo_corte || 0)})),
-      borderColor: coloresTarjeta[(i*2) % coloresTarjeta.length],
+      borderColor: coloresTarjeta[i % coloresTarjeta.length],
       tension: 0.2
     });
-    tarjetaDatasets.push({
-      label: t.nombre + ' ($)',
+    tarjetaDatasetsUSD.push({
+      label: t.nombre,
       data: puntos.map(p => ({x: p.fecha, y: (p.saldo_dia_usd || p.saldo_corte_usd || 0)})),
-      borderColor: coloresTarjeta[(i*2+1) % coloresTarjeta.length],
+      borderColor: coloresTarjeta[i % coloresTarjeta.length],
       tension: 0.2
     });
   });
   charts.tarjeta = new Chart(document.getElementById('chartTarjeta'), {
     type: 'line',
-    data: { datasets: tarjetaDatasets },
+    data: { datasets: tarjetaDatasetsQ },
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'category' } } }
+  });
+  charts.tarjetaUSD = new Chart(document.getElementById('chartTarjetaUSD'), {
+    type: 'line',
+    data: { datasets: tarjetaDatasetsUSD },
     options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'category' } } }
   });
 }
