@@ -134,7 +134,8 @@
         </div>
       </div>
       <div class="card" id="resumenCard">
-        <div class="stat-line"><span>Te sobra esta quincena (día a día)</span><strong id="rSobra">Q0</strong></div>
+        <h2 style="font-size:1rem;">Tus cuentas del día a día</h2>
+        <div id="rSobraPorCuenta"></div>
         <div class="item-sub" id="rPagoMinimo" style="margin-top:6px;"></div>
         <div class="item-sub" id="rPrioridad" style="margin-top:6px;"></div>
       </div>
@@ -205,6 +206,8 @@
               <select id="gFrecuencia"><option value="quincenal">Quincenal</option><option value="mensual">Mensual</option></select>
             </div>
           </div>
+          <label class="field">¿De cuál cuenta sale este gasto?</label>
+          <select id="gCuenta"><option value="">Sin especificar</option></select>
           <button class="primary" id="addGastoBtn">Agregar gasto fijo</button>
         </div>
       </div>
@@ -428,6 +431,8 @@ async function loadGastos() {
   cacheGastos = gastos || [];
   const { data: pagos } = await sb.from('gastos_fijos_pagos').select('*');
   cacheGastosPagos = pagos || [];
+  const gCuentaSelect = document.getElementById('gCuenta');
+  gCuentaSelect.innerHTML = '<option value="">Sin especificar</option>' + cacheCuentas.map(c => `<option value="${c.id}">${accountLabel(c)}</option>`).join('');
   const listEl = document.getElementById('gastosList');
   listEl.innerHTML = '';
   const hoy = todayStr();
@@ -443,7 +448,7 @@ async function loadGastos() {
         <input type="checkbox" ${pagadoEstePeriodo ? 'checked' : ''} data-id="${g.id}" data-action="toggleGasto" style="width:20px; height:20px;">
         <div style="flex:1;">
           <div class="item-title" style="font-size:0.95rem;">${g.nombre}</div>
-          <div class="item-sub">${fmt(g.monto)} · ${g.frecuencia}</div>
+          <div class="item-sub">${fmt(g.monto)} · ${g.frecuencia}${g.id_cuenta ? ' · sale de ' + accountLabel(cacheCuentas.find(c => c.id === g.id_cuenta) || {}) : ''}</div>
         </div>
         <button class="danger-ghost small" data-id="${g.id}" data-action="delGasto">✕</button>
       </div>
@@ -487,7 +492,8 @@ document.getElementById('addGastoBtn').addEventListener('click', async () => {
   const payload = {
     nombre,
     monto: parseFloat(document.getElementById('gMonto').value) || 0,
-    frecuencia: document.getElementById('gFrecuencia').value
+    frecuencia: document.getElementById('gFrecuencia').value,
+    id_cuenta: document.getElementById('gCuenta').value ? parseInt(document.getElementById('gCuenta').value) : null
   };
   const { error } = await sb.from('gastos_fijos').insert(payload);
   restore();
@@ -1122,14 +1128,28 @@ function renderInicio() {
   document.getElementById('rAhorroQ').textContent = fmt(totalAhorroQ, 'Q');
   document.getElementById('rAhorroUSD').textContent = fmt(totalAhorroUSD, '$');
 
-  // Sobra: solo cuentas del día a día (Q) menos gastos fijos (Q) aún no marcados
+  // Sobra por cuenta: cada cuenta día a día, menos los gastos fijos pendientes asignados a ELLA
   const hoy = todayStr();
-  const gastosPendientesQ = cacheGastos.reduce((s, g) => {
+  const gastosPendientes = cacheGastos.filter(g => {
     const periodo = currentPeriodKey(g.frecuencia, hoy);
-    const yaPagado = cacheGastosPagos.some(p => p.id_gasto === g.id && currentPeriodKey(g.frecuencia, p.fecha) === periodo);
-    return yaPagado ? s : s + (g.monto || 0);
-  }, 0);
-  document.getElementById('rSobra').textContent = fmt(totalDiaADia - gastosPendientesQ);
+    return !cacheGastosPagos.some(p => p.id_gasto === g.id && currentPeriodKey(g.frecuencia, p.fecha) === periodo);
+  });
+  const diaADiaCuentasList = cacheCuentas.filter(c => c.currency !== '$' && !(c.tipo_cuenta || '').toLowerCase().includes('ahorro'));
+  const sobraHtml = diaADiaCuentasList.map(c => {
+    const ultimo = cacheSaldosCuentas.find(s => s.id_cuenta === c.id);
+    const saldo = ultimo ? ultimo.monto : 0;
+    const gastosDeEstaCuenta = gastosPendientes.filter(g => g.id_cuenta === c.id);
+    const totalGastos = gastosDeEstaCuenta.reduce((s, g) => s + (g.monto || 0), 0);
+    const queda = saldo - totalGastos;
+    const detalle = gastosDeEstaCuenta.length ? gastosDeEstaCuenta.map(g => g.nombre + ' (' + fmt(g.monto || 0) + ')').join(', ') : 'sin gastos pendientes asignados';
+    return `<div class="stat-line"><span>${accountLabel(c)}</span><strong>${fmt(saldo)}</strong></div>
+      <div class="item-sub" style="margin:-2px 0 8px;">📋 ${detalle}${gastosDeEstaCuenta.length ? ' → te queda ' + fmt(queda) : ''}</div>`;
+  }).join('');
+  const sinAsignar = gastosPendientes.filter(g => !g.id_cuenta);
+  const sinAsignarHtml = sinAsignar.length
+    ? `<div class="item-sub" style="margin-top:4px;">⚠️ Sin cuenta asignada: ${sinAsignar.map(g => g.nombre + ' (' + fmt(g.monto || 0) + ')').join(', ')}</div>`
+    : '';
+  document.getElementById('rSobraPorCuenta').innerHTML = sobraHtml + sinAsignarHtml;
 
   // Tarjeta: saldo real (corte menos pagos hechos desde entonces), y día de corte/pago
   if (cacheTarjetas.length) {
