@@ -68,7 +68,8 @@
   .bar-track { height: 10px; background: var(--ochre-soft); border-radius: 999px; overflow: hidden; margin: 6px 0; }
   .bar-fill { height: 100%; background: var(--sage); border-radius: 999px; }
   .row2 { display: flex; gap: 8px; }
-  .row2 > * { flex: 1; height: 42px; box-sizing: border-box; }
+  .row2 > * { flex: 1; }
+  .row2 > input, .row2 > select, .row2 > button { height: 42px; box-sizing: border-box; }
   .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--teal-dark); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; max-width: 90%; text-align: center; z-index: 50; }
   .toast.show { opacity: 1; }
   .footer-note { text-align: center; font-size: 0.75rem; color: var(--ink-soft); margin-top: 18px; }
@@ -381,6 +382,19 @@ function deleteWithConfirmAndUndo(btn, label, deleteFn) {
   };
 }
 
+function showUndoToast(msg, undoFn) {
+  const t = document.getElementById('toast');
+  t.innerHTML = '✅ ' + msg + ' &nbsp; <span id="toastUndoBtn" style="text-decoration:underline; cursor:pointer; font-weight:600;">Deshacer</span>';
+  t.classList.add('show');
+  const timer = setTimeout(() => t.classList.remove('show'), 4000);
+  const undoBtn = document.getElementById('toastUndoBtn');
+  if (undoBtn) undoBtn.onclick = async () => {
+    clearTimeout(timer);
+    t.classList.remove('show');
+    await undoFn();
+  };
+}
+
 function setSaving(btn, savingText) {
   const original = btn.textContent;
   btn.disabled = true;
@@ -492,7 +506,6 @@ async function loadGastos() {
         <input type="number" placeholder="Monto (ej. una clase)" id="pagoGasto-${g.id}" value="${g.monto || ''}">
         <button class="primary" data-id="${g.id}" data-action="addPagoGasto">+ Agregar pago</button>
       </div>
-      ${pagosEstePeriodo.length ? `<button class="ghost small" data-id="${g.id}" data-action="undoPagoGasto" style="margin-top:6px;">Deshacer último pago</button>` : ''}
     `;
     listEl.appendChild(div);
   });
@@ -512,31 +525,20 @@ async function loadGastos() {
       }
       restore();
       if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
-      showToast(g.id_cuenta ? 'Pago agregado y restado de tu cuenta.' : 'Pago agregado.');
       await loadGastos();
       await loadCuentas();
       renderInicio();
-    });
-  });
-  listEl.querySelectorAll('[data-action="undoPagoGasto"]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = parseInt(btn.dataset.id);
-      const g = cacheGastos.find(x => x.id === id);
-      const pagosEste = cacheGastosPagos.filter(p => p.id_gasto === id && currentPeriodKey(g.frecuencia, p.fecha) === periodoHoy[id]);
-      const ultimo = pagosEste[pagosEste.length - 1];
-      if (ultimo) {
-        const montoDevuelto = ultimo.monto != null ? ultimo.monto : (g.monto || 0);
-        await sb.from('gastos_fijos_pagos').insert({ id_gasto: id, fecha: hoy, monto: -montoDevuelto });
+      showUndoToast(g.id_cuenta ? 'Pago agregado y restado de tu cuenta.' : 'Pago agregado.', async () => {
+        await sb.from('gastos_fijos_pagos').insert({ id_gasto: id, fecha: hoy, monto: -monto });
         if (g.id_cuenta) {
-          const ultimoSaldo = cacheSaldosCuentas.find(s => s.id_cuenta === g.id_cuenta);
-          const saldoActual = ultimoSaldo ? ultimoSaldo.monto : 0;
-          await sb.from('saldos_cuentas').insert({ id_cuenta: g.id_cuenta, monto: saldoActual + montoDevuelto, fecha: hoy });
+          const ultimoSaldo2 = cacheSaldosCuentas.find(s => s.id_cuenta === g.id_cuenta);
+          const saldoActual2 = ultimoSaldo2 ? ultimoSaldo2.monto : 0;
+          await sb.from('saldos_cuentas').insert({ id_cuenta: g.id_cuenta, monto: saldoActual2 + monto, fecha: hoy });
         }
-      }
-      showToast('Último pago devuelto.');
-      await loadGastos();
-      await loadCuentas();
-      renderInicio();
+        await loadGastos();
+        await loadCuentas();
+        renderInicio();
+      });
     });
   });
   listEl.querySelectorAll('[data-action="delGasto"]').forEach(btn => {
@@ -649,7 +651,7 @@ async function loadDeudas() {
       <div class="item-sub" style="margin-top:8px;">${fmt(totalPagado)} pagado de ${fmt(d.monto_aprobado)} — ${fmt(restante)} restante</div>
       ${pagoRowHtml}
       <div class="row2" style="margin-top:8px;">
-        <button class="ghost small" data-id="${d.id}" data-action="toggleEdit">Editar</button>
+        <button class="ghost small" style="margin-top:0" data-id="${d.id}" data-action="toggleEdit">Editar</button>
         <button class="danger-ghost small" data-id="${d.id}" data-action="delDeuda">Eliminar</button>
       </div>
       <div id="editForm-${d.id}" class="collapsible">
@@ -796,7 +798,7 @@ async function loadCuentas() {
       </div>
       <div class="row2" style="margin-top:8px;">
         <button class="danger-ghost small" data-id="${c.id}" data-action="delCuenta">Eliminar cuenta</button>
-        <button class="ghost small" data-id="${c.id}" data-action="toggleEditCuenta">Editar apodo</button>
+        <button class="ghost small" style="margin-top:0" data-id="${c.id}" data-action="toggleEditCuenta">Editar apodo</button>
       </div>
       <div id="editCuenta-${c.id}" class="collapsible">
         <label class="field">Apodo</label>
