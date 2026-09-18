@@ -649,7 +649,7 @@ async function loadDeudas() {
       <div class="item-sub" style="margin-top:8px;">${fmt(totalPagado)} pagado de ${fmt(d.monto_aprobado)} — ${fmt(restante)} restante</div>
       ${pagoRowHtml}
       <div class="row2" style="margin-top:8px;">
-        <button class="ghost small" data-id="${d.id}" data-action="toggleEdit">Editar</button>
+        <button class="ghost small" style="margin-top:0" data-id="${d.id}" data-action="toggleEdit">Editar</button>
         <button class="danger-ghost small" data-id="${d.id}" data-action="delDeuda">Eliminar</button>
       </div>
       <div id="editForm-${d.id}" class="collapsible">
@@ -796,7 +796,7 @@ async function loadCuentas() {
       </div>
       <div class="row2" style="margin-top:8px;">
         <button class="danger-ghost small" data-id="${c.id}" data-action="delCuenta">Eliminar cuenta</button>
-        <button class="ghost small" data-id="${c.id}" data-action="toggleEditCuenta">Editar apodo</button>
+        <button class="ghost small" style="margin-top:0" data-id="${c.id}" data-action="toggleEditCuenta">Editar apodo</button>
       </div>
       <div id="editCuenta-${c.id}" class="collapsible">
         <label class="field">Apodo</label>
