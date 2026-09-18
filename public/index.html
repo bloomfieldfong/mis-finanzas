@@ -203,7 +203,7 @@
           <div class="row2">
             <div><label class="field">Monto</label><input type="number" id="gMonto"></div>
             <div><label class="field">Frecuencia</label>
-              <select id="gFrecuencia"><option value="semanal">Semanal</option><option value="quincenal">Quincenal</option><option value="mensual">Mensual</option><option value="cuotas">Cuotas</option></select>
+              <select id="gFrecuencia"><option value="semanal">Semanal</option><option value="quincenal">Quincenal</option><option value="mensual">Mensual</option><option value="cuotas">Cuotas (sin reinicio automático)</option></select>
             </div>
           </div>
           <label class="field">¿De cuál cuenta sale este gasto?</label>
@@ -473,14 +473,21 @@ async function loadGastos() {
   listEl.querySelectorAll('[data-action="addPagoGasto"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = parseInt(btn.dataset.id);
+      const g = cacheGastos.find(x => x.id === id);
       const monto = parseFloat(document.getElementById('pagoGasto-' + id).value);
       if (!monto || monto <= 0) { showToast('Metele un monto válido.', '⚠️'); return; }
       const restore = setSaving(btn, 'Guardando...');
       const { error } = await sb.from('gastos_fijos_pagos').insert({ id_gasto: id, fecha: hoy, monto });
+      if (!error && g.id_cuenta) {
+        const ultimoSaldo = cacheSaldosCuentas.find(s => s.id_cuenta === g.id_cuenta);
+        const saldoActual = ultimoSaldo ? ultimoSaldo.monto : 0;
+        await sb.from('saldos_cuentas').insert({ id_cuenta: g.id_cuenta, monto: saldoActual - monto, fecha: hoy });
+      }
       restore();
       if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
-      showToast('Pago agregado.');
+      showToast(g.id_cuenta ? 'Pago agregado y restado de tu cuenta.' : 'Pago agregado.');
       loadGastos();
+      loadCuentas();
       renderInicio();
     });
   });
@@ -490,9 +497,18 @@ async function loadGastos() {
       const g = cacheGastos.find(x => x.id === id);
       const pagosEste = cacheGastosPagos.filter(p => p.id_gasto === id && currentPeriodKey(g.frecuencia, p.fecha) === periodoHoy[id]);
       const ultimo = pagosEste[pagosEste.length - 1];
-      if (ultimo) await sb.from('gastos_fijos_pagos').delete().eq('id', ultimo.id);
+      if (ultimo) {
+        await sb.from('gastos_fijos_pagos').delete().eq('id', ultimo.id);
+        if (g.id_cuenta) {
+          const montoDevuelto = ultimo.monto != null ? ultimo.monto : (g.monto || 0);
+          const ultimoSaldo = cacheSaldosCuentas.find(s => s.id_cuenta === g.id_cuenta);
+          const saldoActual = ultimoSaldo ? ultimoSaldo.monto : 0;
+          await sb.from('saldos_cuentas').insert({ id_cuenta: g.id_cuenta, monto: saldoActual + montoDevuelto, fecha: hoy });
+        }
+      }
       showToast('Último pago deshecho.');
       loadGastos();
+      loadCuentas();
       renderInicio();
     });
   });
