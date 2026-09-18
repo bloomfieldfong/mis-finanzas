@@ -269,7 +269,12 @@
         </div>
         <button class="primary" id="addGastoVariableBtn">Registrar gasto</button>
       </div>
-      <div id="gastosVariablesList"></div>
+      <div class="card">
+        <button class="ghost" id="btnShowGastosVariables">Ver gastos registrados</button>
+        <div id="gastosVariablesCollapsible" class="collapsible">
+          <div id="gastosVariablesList"></div>
+        </div>
+      </div>
       <div class="card">
         <button class="ghost" id="btnShowNuevoGasto">+ Agregar gasto fijo</button>
         <div id="formNuevoGasto" class="collapsible">
@@ -447,6 +452,10 @@ const GASTO_CATEGORIAS = {
 function gastoCategoriaMeta(categoria) {
   return GASTO_CATEGORIAS[categoria] || GASTO_CATEGORIAS.otro;
 }
+const CATEGORIA_HEX = {
+  casa: '#E0A72E', transporte: '#9B7BD1', salud: '#3FB6B0', comida: '#EF9351',
+  entretenimiento: '#4E7FDB', compras: '#E0577A', servicios: '#4CAF7D', otro: '#9C8B93'
+};
 
 function collapseToLastPerDay(rows) {
   const byDate = {};
@@ -598,6 +607,7 @@ async function loadGastosVariables() {
   populateSelect(document.getElementById('gvCuenta'), cacheCuentas, c => accountLabel(c));
   const { data: gastosVar } = await sb.from('gastos_variables').select('*').order('id', { ascending: false }).limit(20);
   cacheGastosVariables = gastosVar || [];
+  document.getElementById('btnShowGastosVariables').textContent = `Ver gastos registrados (${cacheGastosVariables.length})`;
   const listEl = document.getElementById('gastosVariablesList');
   listEl.innerHTML = '';
   cacheGastosVariables.forEach(g => {
@@ -1204,8 +1214,14 @@ async function renderStats() {
   const { data: saldosCuentas } = await sb.from('saldos_cuentas').select('*').order('fecha');
   const { data: tarjetas } = await sb.from('tarjetas').select('*');
   const { data: saldosTarjeta } = await sb.from('saldos').select('*').order('fecha');
+  const { data: gastosVarAll } = await sb.from('gastos_variables').select('*');
 
   el.innerHTML = `
+    <div class="card">
+      <h2>Gastos por categoría</h2>
+      <div class="chart-wrap" style="height:220px;"><canvas id="chartCategorias"></canvas></div>
+      <div id="categoriasLegend"></div>
+    </div>
     <div class="card">
       <h2>Deuda total restante</h2>
       <div class="chart-wrap"><canvas id="chartDeudaTotal"></canvas></div>
@@ -1235,6 +1251,36 @@ async function renderStats() {
       <div class="chart-wrap"><canvas id="chartTarjetaUSD"></canvas></div>
     </div>
   `;
+
+  // Gastos por categoría (todos los gastos registrados, agrupados)
+  const totalesPorCategoria = {};
+  (gastosVarAll || []).forEach(g => {
+    const cat = g.categoria || 'otro';
+    totalesPorCategoria[cat] = (totalesPorCategoria[cat] || 0) + (g.monto || 0);
+  });
+  const categoriasConGasto = Object.keys(totalesPorCategoria).filter(cat => totalesPorCategoria[cat] > 0);
+  destroyChart('categorias');
+  if (categoriasConGasto.length === 0) {
+    document.getElementById('categoriasLegend').innerHTML = '<p class="item-sub">Todavía no hay gastos registrados.</p>';
+  } else {
+    const catLabels = categoriasConGasto.map(cat => gastoCategoriaMeta(cat).label);
+    const catData = categoriasConGasto.map(cat => totalesPorCategoria[cat]);
+    const catColors = categoriasConGasto.map(cat => CATEGORIA_HEX[cat] || CATEGORIA_HEX.otro);
+    charts.categorias = new Chart(document.getElementById('chartCategorias'), {
+      type: 'pie',
+      data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: catColors, borderColor: '#fff', borderWidth: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+    const totalGeneral = catData.reduce((s, v) => s + v, 0);
+    const legendHtml = categoriasConGasto
+      .map((cat, i) => ({ cat, monto: catData[i], color: catColors[i] }))
+      .sort((a, b) => b.monto - a.monto)
+      .map(({ cat, monto, color }) => {
+        const pct = totalGeneral > 0 ? Math.round((monto / totalGeneral) * 100) : 0;
+        return `<div class="stat-line"><span><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; margin-right:6px;"></span>${gastoCategoriaMeta(cat).label}</span><strong>${fmt(monto)} (${pct}%)</strong></div>`;
+      }).join('');
+    document.getElementById('categoriasLegend').innerHTML = legendHtml;
+  }
 
   // Deuda total restante: pasado real (manuales) + hoy + proyección futura (automáticas)
   const hoyCombo = todayStr();
@@ -1515,6 +1561,7 @@ Object.entries(quickActionMap).forEach(([btnId, formId]) => {
 });
 
 document.getElementById('btnShowNuevoGasto').addEventListener('click', () => toggleForm('formNuevoGasto'));
+document.getElementById('btnShowGastosVariables').addEventListener('click', () => toggleForm('gastosVariablesCollapsible'));
 document.getElementById('btnShowNuevaDeuda').addEventListener('click', () => toggleForm('formNuevaDeuda'));
 document.getElementById('btnShowNuevaCuenta').addEventListener('click', () => toggleForm('formNuevaCuenta'));
 document.getElementById('btnShowNuevaTarjeta').addEventListener('click', () => toggleForm('formNuevaTarjeta'));
