@@ -232,8 +232,11 @@
             <div><label class="field">Pago mensual (Q)</label><input type="number" id="dPagoMensual"></div>
             <div><label class="field">Cantidad cuotas</label><input type="number" id="dCantCuotas"></div>
           </div>
-          <label class="field">Cuotas ya pagadas (solo si es automática)</label>
-          <input type="number" id="dCuotasPagadas" placeholder="0">
+          <label class="field">Saldo actual y cuotas pendientes (según tu banco)</label>
+          <div class="row2">
+            <div><label class="field">Saldo actual (Q)</label><input type="number" id="dSaldoActual" placeholder="Igual al monto aprobado si es nueva"></div>
+            <div><label class="field">Cuotas pendientes</label><input type="number" id="dCuotasPendientes" placeholder="Igual a cant. cuotas si es nueva"></div>
+          </div>
           <label class="field">Fecha inicio</label>
           <input type="date" id="dFechaInicio">
           <button class="primary" id="addDeudaBtn">Agregar deuda</button>
@@ -467,10 +470,10 @@ document.getElementById('addGastoBtn').addEventListener('click', async () => {
 // ---------- DEUDAS ----------
 function calcAutomatica(d) {
   const cant = d.cantidad_cuotas || 0;
-  const transcurridas = Math.max(0, Math.min(cant, d.cuotas_pagadas || 0));
-  const pagado = transcurridas * (d.pago_mensual || 0);
-  const restante = Math.max(0, (d.monto_aprobado || 0) - pagado);
-  const pendientes = Math.max(0, cant - transcurridas);
+  const restante = d.monto_restante != null ? d.monto_restante : (d.monto_aprobado || 0);
+  const pendientes = d.cuotas_pendientes != null ? d.cuotas_pendientes : cant;
+  const transcurridas = Math.max(0, cant - pendientes);
+  const pagado = Math.max(0, (d.monto_aprobado || 0) - restante);
   return { transcurridas, pagado, restante, pendientes };
 }
 
@@ -554,8 +557,10 @@ async function loadDeudas() {
           <div><label class="field">Pago mensual</label><input type="number" id="ePagoMensual-${d.id}" value="${d.pago_mensual || 0}"></div>
           <div><label class="field">Cant. cuotas</label><input type="number" id="eCantCuotas-${d.id}" value="${d.cantidad_cuotas || 0}"></div>
         </div>
-        <label class="field">Cuotas ya pagadas (solo automática)</label>
-        <input type="number" id="eCuotasPagadas-${d.id}" value="${d.cuotas_pagadas || 0}">
+        <div class="row2">
+          <div><label class="field">Saldo actual (Q, según banco)</label><input type="number" id="eSaldoActual-${d.id}" value="${d.monto_restante != null ? d.monto_restante : (d.monto_aprobado || 0)}"></div>
+          <div><label class="field">Cuotas pendientes</label><input type="number" id="eCuotasPendientes-${d.id}" value="${d.cuotas_pendientes != null ? d.cuotas_pendientes : (d.cantidad_cuotas || 0)}"></div>
+        </div>
         <button class="primary small" data-id="${d.id}" data-action="saveEdit">Guardar cambios</button>
       </div>
     `;
@@ -578,11 +583,11 @@ async function loadDeudas() {
         tasa_interes: parseFloat(document.getElementById('eTasa-' + id).value) || 0,
         pago_mensual: parseFloat(document.getElementById('ePagoMensual-' + id).value) || 0,
         cantidad_cuotas: parseInt(document.getElementById('eCantCuotas-' + id).value) || 0,
-        cuotas_pagadas: parseInt(document.getElementById('eCuotasPagadas-' + id).value) || 0
+        monto_restante: parseFloat(document.getElementById('eSaldoActual-' + id).value) || 0,
+        cuotas_pendientes: parseInt(document.getElementById('eCuotasPendientes-' + id).value) || 0
       };
       const { error } = await sb.from('deudas').update(payload).eq('id', id);
       if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
-      await syncDeudaRestante(id);
       showToast('Deuda actualizada.');
       loadDeudas();
     });
@@ -616,6 +621,8 @@ document.getElementById('addDeudaBtn').addEventListener('click', async () => {
   if (!nombre) { showToast('Ponle un nombre a la deuda.', '⚠️'); return; }
   const montoAprobado = parseFloat(document.getElementById('dMonto').value) || 0;
   const cantCuotas = parseInt(document.getElementById('dCantCuotas').value) || 0;
+  const saldoActualInput = document.getElementById('dSaldoActual').value;
+  const cuotasPendientesInput = document.getElementById('dCuotasPendientes').value;
   const payload = {
     nombre,
     tipo: document.getElementById('dTipo').value,
@@ -624,16 +631,15 @@ document.getElementById('addDeudaBtn').addEventListener('click', async () => {
     tasa_interes: parseFloat(document.getElementById('dTasa').value) || 0,
     pago_mensual: parseFloat(document.getElementById('dPagoMensual').value) || 0,
     cantidad_cuotas: cantCuotas,
-    cuotas_pagadas: parseInt(document.getElementById('dCuotasPagadas').value) || 0,
-    monto_restante: montoAprobado,
-    cuotas_pendientes: cantCuotas,
+    monto_restante: saldoActualInput !== '' ? parseFloat(saldoActualInput) : montoAprobado,
+    cuotas_pendientes: cuotasPendientesInput !== '' ? parseInt(cuotasPendientesInput) : cantCuotas,
     fecha_inicio: document.getElementById('dFechaInicio').value || null,
     temporalidad: 'mensual'
   };
   const { error } = await sb.from('deudas').insert(payload);
   if (error) { showToast('No se pudo agregar.', '⚠️'); return; }
   showToast('Deuda agregada.');
-  ['dNombre','dDesc','dMonto','dTasa','dPagoMensual','dCantCuotas','dCuotasPagadas','dFechaInicio'].forEach(id => document.getElementById(id).value = '');
+  ['dNombre','dDesc','dMonto','dTasa','dPagoMensual','dCantCuotas','dSaldoActual','dCuotasPendientes','dFechaInicio'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('formNuevaDeuda').style.display = 'none';
   loadDeudas();
 });
