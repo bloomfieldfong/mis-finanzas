@@ -75,6 +75,7 @@
   .metric-card .metric-value { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.25rem; }
   .metric-card .metric-sub { font-size: 0.72rem; color: var(--ink-soft); margin-top: 2px; }
   .logout-link { font-size: 0.8rem; color: var(--ink-soft); cursor: pointer; text-decoration: underline; }
+  @keyframes pulseAlert { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
 </style>
 </head>
 <body>
@@ -136,7 +137,7 @@
       <div class="card" id="resumenCard">
         <h2 style="font-size:1rem;">Tus cuentas del día a día</h2>
         <div id="rSobraPorCuenta"></div>
-        <div class="item-sub" id="rPagoMinimo" style="margin-top:6px;"></div>
+        <div id="rPagoMinimo" style="margin-top:10px;"></div>
         <div class="item-sub" id="rPrioridad" style="margin-top:6px;"></div>
       </div>
       <p class="sub">¿Qué pasó? Elige una opción y ya.</p>
@@ -499,15 +500,15 @@ async function loadGastos() {
       const pagosEste = cacheGastosPagos.filter(p => p.id_gasto === id && currentPeriodKey(g.frecuencia, p.fecha) === periodoHoy[id]);
       const ultimo = pagosEste[pagosEste.length - 1];
       if (ultimo) {
-        await sb.from('gastos_fijos_pagos').delete().eq('id', ultimo.id);
+        const montoDevuelto = ultimo.monto != null ? ultimo.monto : (g.monto || 0);
+        await sb.from('gastos_fijos_pagos').insert({ id_gasto: id, fecha: hoy, monto: -montoDevuelto });
         if (g.id_cuenta) {
-          const montoDevuelto = ultimo.monto != null ? ultimo.monto : (g.monto || 0);
           const ultimoSaldo = cacheSaldosCuentas.find(s => s.id_cuenta === g.id_cuenta);
           const saldoActual = ultimoSaldo ? ultimoSaldo.monto : 0;
           await sb.from('saldos_cuentas').insert({ id_cuenta: g.id_cuenta, monto: saldoActual + montoDevuelto, fecha: hoy });
         }
       }
-      showToast('Último pago deshecho.');
+      showToast('Último pago devuelto.');
       loadGastos();
       loadCuentas();
       renderInicio();
@@ -1183,7 +1184,7 @@ function renderInicio() {
     const restante = Math.max(0, (g.monto || 0) - pagadoEstePeriodo);
     return { ...g, restante };
   }).filter(g => g.restante > 0);
-  const diaADiaCuentasList = cacheCuentas.filter(c => c.currency !== '$' && !(c.tipo_cuenta || '').toLowerCase().includes('ahorro'));
+  const diaADiaCuentasList = cacheCuentas.filter(c => c.currency !== '$' && !(c.tipo_cuenta || '').toLowerCase().includes('ahorro')).slice().reverse();
   const sobraHtml = diaADiaCuentasList.map(c => {
     const ultimo = cacheSaldosCuentas.find(s => s.id_cuenta === c.id);
     const saldo = ultimo ? ultimo.monto : 0;
@@ -1211,16 +1212,16 @@ function renderInicio() {
       const saldoActual = Math.max(0, saldoDiaBase - totalPagado);
       document.getElementById('rTarjetaSaldo').textContent = fmt(saldoActual);
       document.getElementById('rTarjetaSaldoUSD').textContent = fmt(ultimoSaldo.saldo_dia_usd || ultimoSaldo.saldo_corte_usd || 0, '$');
-      document.getElementById('rPagoMinimo').textContent = '💳 El día ' + (t.fecha_pago || '-') + ' debes pagar mínimo: ' + fmt(ultimoSaldo.pago_minimo || 0) + ' + ' + fmt(ultimoSaldo.pago_minimo_usd || 0, '$');
+      document.getElementById('rPagoMinimo').innerHTML = `<div style="background:var(--ochre); color:#fff; padding:12px 14px; border-radius:12px; font-weight:600; font-size:0.9rem; box-shadow:0 3px 10px rgba(204,113,120,0.35); animation:pulseAlert 2s ease-in-out infinite;">🚨 ¡Ojo! El día ${t.fecha_pago || '-'} debes pagar mínimo: ${fmt(ultimoSaldo.pago_minimo || 0)} + ${fmt(ultimoSaldo.pago_minimo_usd || 0, '$')}</div>`;
     } else {
       document.getElementById('rTarjetaSaldo').textContent = 'sin registrar';
-      document.getElementById('rPagoMinimo').textContent = '';
+      document.getElementById('rPagoMinimo').innerHTML = '';
     }
     document.getElementById('rDiasPago').textContent = 'Día ' + (t.fecha_pago || '-') + ' (corte día ' + (t.fecha_corte || '-') + ')';
   } else {
     document.getElementById('rTarjetaSaldo').textContent = '-';
     document.getElementById('rDiasPago').textContent = '-';
-    document.getElementById('rPagoMinimo').textContent = '';
+    document.getElementById('rPagoMinimo').innerHTML = '';
   }
 
   // Prioridad: deuda más chica con saldo pendiente
