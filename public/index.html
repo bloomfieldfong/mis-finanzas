@@ -95,6 +95,7 @@
     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
       <div>
         <h1>Michi-finanzas</h1>
+        <p class="sub" style="margin-bottom:8px;">we don't need to buy that</p>
               </div>
       <span class="logout-link" id="logoutBtn">Salir</span>
     </div>
@@ -165,12 +166,20 @@
           <label class="field">¿Cuál tarjeta?</label>
           <select id="qTarjeta"></select>
           <div class="row2">
-            <div><label class="field">Saldo al corte</label><input type="number" id="qCorteSaldo"></div>
-            <div><label class="field">Pago mínimo</label><input type="number" id="qCortePMin"></div>
+            <div><label class="field">Saldo al corte (Q)</label><input type="number" id="qCorteSaldo"></div>
+            <div><label class="field">Saldo al corte ($)</label><input type="number" id="qCorteSaldoUSD"></div>
           </div>
           <div class="row2">
-            <div><label class="field">Pago contado</label><input type="number" id="qCortePContado"></div>
-            <div><label class="field">Moneda</label><select id="qCorteCurr"><option value="Q">Q</option><option value="$">$</option></select></div>
+            <div><label class="field">Saldo al día (Q)</label><input type="number" id="qCorteSaldoDia"></div>
+            <div><label class="field">Saldo al día ($)</label><input type="number" id="qCorteSaldoDiaUSD"></div>
+          </div>
+          <div class="row2">
+            <div><label class="field">Pago contado (Q)</label><input type="number" id="qCortePContado"></div>
+            <div><label class="field">Pago contado ($)</label><input type="number" id="qCortePContadoUSD"></div>
+          </div>
+          <div class="row2">
+            <div><label class="field">Pago mínimo (Q)</label><input type="number" id="qCortePMin"></div>
+            <div><label class="field">Pago mínimo ($)</label><input type="number" id="qCortePMinUSD"></div>
           </div>
           <label class="field">Fecha</label>
           <input type="date" id="qCorteFecha">
@@ -723,27 +732,37 @@ async function loadTarjetas() {
     const ultimo = (saldos || []).find(s => s.id_tarjeta === t.id);
     const pagosDesdeCorte = ultimo ? (pagosTarjeta || []).filter(p => p.id_tarjeta === t.id && p.fecha >= ultimo.fecha) : [];
     const totalPagado = pagosDesdeCorte.reduce((s, p) => s + (p.monto || 0), 0);
-    const saldoActual = ultimo ? Math.max(0, ultimo.saldo_corte - totalPagado) : 0;
+    const saldoDiaBase = ultimo ? (ultimo.saldo_dia || ultimo.saldo_corte || 0) : 0;
+    const saldoActual = Math.max(0, saldoDiaBase - totalPagado);
 
     const div = document.createElement('div');
     div.className = 'item';
     div.innerHTML = `
       <div class="item-title">${t.nombre}</div>
       <div class="item-sub">Corte: ${t.fecha_corte || '-'} · Pago: ${t.fecha_pago || '-'}</div>
-      <div class="item-sub">Al corte (${ultimo ? ultimo.fecha : '-'}): ${ultimo ? fmt(ultimo.saldo_corte, ultimo.currency) : 'sin registrar'}</div>
-      ${ultimo ? `<div class="item-sub" style="color:var(--sage);">Ya pagaste ${fmt(totalPagado, ultimo.currency)} desde entonces → debes ${fmt(saldoActual, ultimo.currency)}</div>` : ''}
       ${ultimo ? `
+      <div class="item-sub">Al corte (${ultimo.fecha}): Q${(ultimo.saldo_corte||0).toFixed(2)} · $${(ultimo.saldo_corte_usd||0).toFixed(2)}</div>
+      <div class="item-sub">Saldo al día: Q${(ultimo.saldo_dia||0).toFixed(2)} · $${(ultimo.saldo_dia_usd||0).toFixed(2)}</div>
+      <div class="item-sub" style="color:var(--sage);">Ya pagaste ${fmt(totalPagado)} desde entonces → debes ${fmt(saldoActual)}</div>
       <div class="row2">
-        <input type="number" placeholder="Monto del pago" id="pagoTarjeta-${t.id}">
+        <input type="number" placeholder="Monto del pago (Q)" id="pagoTarjeta-${t.id}">
         <button class="primary small" data-id="${t.id}" data-action="addPagoTarjeta">+ Pago</button>
-      </div>` : ''}
+      </div>` : `<div class="item-sub">Sin corte registrado todavía.</div>`}
       <div class="row2" style="margin-top:8px;">
-        <input type="number" placeholder="Saldo al corte" id="scorte-${t.id}">
-        <input type="number" placeholder="Pago mínimo" id="pmin-${t.id}">
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo corte (Q)</label><input type="number" id="scorte-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo corte ($)</label><input type="number" id="scorteusd-${t.id}"></div>
       </div>
       <div class="row2">
-        <input type="number" placeholder="Pago contado" id="pcontado-${t.id}">
-        <select id="curr-${t.id}"><option value="Q">Q</option><option value="$">$</option></select>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo al día (Q)</label><input type="number" id="sdia-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo al día ($)</label><input type="number" id="sdiausd-${t.id}"></div>
+      </div>
+      <div class="row2">
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago contado (Q)</label><input type="number" id="pcontado-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago contado ($)</label><input type="number" id="pcontadousd-${t.id}"></div>
+      </div>
+      <div class="row2">
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago mínimo (Q)</label><input type="number" id="pmin-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago mínimo ($)</label><input type="number" id="pminusd-${t.id}"></div>
       </div>
       <button class="primary small" data-id="${t.id}" data-action="addCorte">Guardar corte de hoy</button>
       <button class="danger-ghost small" data-id="${t.id}" data-action="delTarjeta" style="margin-top:8px;">Eliminar tarjeta</button>
@@ -768,9 +787,13 @@ async function loadTarjetas() {
       const payload = {
         id_tarjeta: parseInt(id),
         saldo_corte: parseFloat(document.getElementById('scorte-' + id).value) || 0,
-        pago_minimo: parseFloat(document.getElementById('pmin-' + id).value) || 0,
+        saldo_corte_usd: parseFloat(document.getElementById('scorteusd-' + id).value) || 0,
+        saldo_dia: parseFloat(document.getElementById('sdia-' + id).value) || 0,
+        saldo_dia_usd: parseFloat(document.getElementById('sdiausd-' + id).value) || 0,
         pago_contado: parseFloat(document.getElementById('pcontado-' + id).value) || 0,
-        currency: document.getElementById('curr-' + id).value,
+        pago_contado_usd: parseFloat(document.getElementById('pcontadousd-' + id).value) || 0,
+        pago_minimo: parseFloat(document.getElementById('pmin-' + id).value) || 0,
+        pago_minimo_usd: parseFloat(document.getElementById('pminusd-' + id).value) || 0,
         fecha: new Date().toISOString().slice(0,10)
       };
       const { error } = await sb.from('saldos').insert(payload);
@@ -1004,8 +1027,9 @@ function renderInicio() {
     if (ultimoSaldo) {
       const pagosDesdeCorte = cachePagosTarjeta.filter(p => p.id_tarjeta === t.id && p.fecha >= ultimoSaldo.fecha);
       const totalPagado = pagosDesdeCorte.reduce((s, p) => s + (p.monto || 0), 0);
-      const saldoActual = Math.max(0, ultimoSaldo.saldo_corte - totalPagado);
-      document.getElementById('rTarjetaSaldo').textContent = fmt(saldoActual, ultimoSaldo.currency);
+      const saldoDiaBase = ultimoSaldo.saldo_dia || ultimoSaldo.saldo_corte || 0;
+      const saldoActual = Math.max(0, saldoDiaBase - totalPagado);
+      document.getElementById('rTarjetaSaldo').textContent = fmt(saldoActual);
     } else {
       document.getElementById('rTarjetaSaldo').textContent = 'sin registrar';
     }
@@ -1065,16 +1089,20 @@ document.getElementById('qCorteSave').addEventListener('click', async () => {
   const payload = {
     id_tarjeta: idTarjeta,
     saldo_corte: parseFloat(document.getElementById('qCorteSaldo').value) || 0,
+    saldo_corte_usd: parseFloat(document.getElementById('qCorteSaldoUSD').value) || 0,
+    saldo_dia: parseFloat(document.getElementById('qCorteSaldoDia').value) || 0,
+    saldo_dia_usd: parseFloat(document.getElementById('qCorteSaldoDiaUSD').value) || 0,
     pago_minimo: parseFloat(document.getElementById('qCortePMin').value) || 0,
+    pago_minimo_usd: parseFloat(document.getElementById('qCortePMinUSD').value) || 0,
     pago_contado: parseFloat(document.getElementById('qCortePContado').value) || 0,
-    currency: document.getElementById('qCorteCurr').value,
+    pago_contado_usd: parseFloat(document.getElementById('qCortePContadoUSD').value) || 0,
     fecha
   };
   if (!idTarjeta) { showToast('Elige una tarjeta.', '⚠️'); return; }
   const { error } = await sb.from('saldos').insert(payload);
   if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
   showToast('Corte guardado.');
-  ['qCorteSaldo','qCortePMin','qCortePContado'].forEach(id => document.getElementById(id).value = '');
+  ['qCorteSaldo','qCorteSaldoUSD','qCorteSaldoDia','qCorteSaldoDiaUSD','qCortePMin','qCortePMinUSD','qCortePContado','qCortePContadoUSD'].forEach(id => document.getElementById(id).value = '');
   loadTarjetas();
 });
 
