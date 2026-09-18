@@ -228,9 +228,14 @@
             <div><label class="field">Tasa interés (%)</label><input type="number" id="dTasa"></div>
           </div>
           <div class="row2">
-            <div><label class="field">Pago mensual (Q)</label><input type="number" id="dPagoMensual"></div>
+            <div><label class="field">Pago por cuota (Q)</label><input type="number" id="dPagoMensual"></div>
             <div><label class="field">Cantidad cuotas</label><input type="number" id="dCantCuotas"></div>
           </div>
+          <label class="field">Frecuencia del pago</label>
+          <select id="dFrecuencia">
+            <option value="mensual">Mensual</option>
+            <option value="quincenal">Quincenal</option>
+          </select>
           <label class="field">Saldo actual y cuotas pendientes (según tu banco)</label>
           <div class="row2">
             <div><label class="field">Saldo actual (Q)</label><input type="number" id="dSaldoActual" placeholder="Igual al monto aprobado si es nueva"></div>
@@ -492,31 +497,33 @@ async function loadDeudas() {
   listEl.innerHTML = '';
   const hoy = todayStr();
   (deudas || []).forEach(d => {
-    let totalPagado, restante, mesesRestantes, pagoRowHtml;
+    let totalPagado, restante, cuotasRestantes, pagoRowHtml;
     if (d.tipo === 'automatica') {
       const c = calcAutomatica(d);
       totalPagado = c.pagado;
       restante = c.restante;
-      mesesRestantes = c.pendientes;
+      cuotasRestantes = c.pendientes;
       pagoRowHtml = `<div class="item-sub">🔁 Automática — cuota ${c.transcurridas} de ${d.cantidad_cuotas || 0}, se descuenta sola.</div>`;
     } else {
       const misPagos = (pagos || []).filter(p => p.id_deuda === d.id);
       totalPagado = misPagos.reduce((s, p) => s + (p.monto_pagado || 0), 0);
       restante = Math.max(0, (d.monto_aprobado || 0) - totalPagado);
-      mesesRestantes = d.pago_mensual > 0 ? Math.ceil(restante / d.pago_mensual) : 0;
+      cuotasRestantes = d.pago_mensual > 0 ? Math.ceil(restante / d.pago_mensual) : 0;
       pagoRowHtml = `
       <div class="row2">
         <input type="number" placeholder="Monto del pago" id="pagoMonto-${d.id}">
         <button class="primary small" data-id="${d.id}" data-action="addPago">+ Pago</button>
       </div>`;
     }
+    const esQuincenal = d.temporalidad === 'quincenal';
+    const mesesRestantes = esQuincenal ? Math.ceil(cuotasRestantes / 2) : cuotasRestantes;
     const pct = d.monto_aprobado > 0 ? Math.min(100, (totalPagado / d.monto_aprobado) * 100) : 0;
 
     const div = document.createElement('div');
     div.className = 'item';
     div.innerHTML = `
       <div class="item-title">${d.nombre}</div>
-      <div class="item-sub">${d.tasa_interes || 0}% · ${fmt(d.pago_mensual)}/mes · faltan ~${mesesRestantes} meses</div>
+      <div class="item-sub">${d.tasa_interes || 0}% · ${fmt(d.pago_mensual)}/${esQuincenal ? 'quincena' : 'mes'} · faltan ${cuotasRestantes} cuotas (~${mesesRestantes} meses)</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
       <div class="item-sub">${fmt(totalPagado)} pagado de ${fmt(d.monto_aprobado)} — ${fmt(restante)} restante</div>
       ${pagoRowHtml}
@@ -537,9 +544,14 @@ async function loadDeudas() {
           <div><label class="field">Tasa interés</label><input type="number" id="eTasa-${d.id}" value="${d.tasa_interes || 0}"></div>
         </div>
         <div class="row2">
-          <div><label class="field">Pago mensual</label><input type="number" id="ePagoMensual-${d.id}" value="${d.pago_mensual || 0}"></div>
+          <div><label class="field">Pago por cuota</label><input type="number" id="ePagoMensual-${d.id}" value="${d.pago_mensual || 0}"></div>
           <div><label class="field">Cant. cuotas</label><input type="number" id="eCantCuotas-${d.id}" value="${d.cantidad_cuotas || 0}"></div>
         </div>
+        <label class="field">Frecuencia del pago</label>
+        <select id="eFrecuencia-${d.id}">
+          <option value="mensual" ${d.temporalidad !== 'quincenal' ? 'selected' : ''}>Mensual</option>
+          <option value="quincenal" ${d.temporalidad === 'quincenal' ? 'selected' : ''}>Quincenal</option>
+        </select>
         <div class="row2">
           <div><label class="field">Saldo actual (Q, según banco)</label><input type="number" id="eSaldoActual-${d.id}" value="${d.monto_restante != null ? d.monto_restante : (d.monto_aprobado || 0)}"></div>
           <div><label class="field">Cuotas pendientes</label><input type="number" id="eCuotasPendientes-${d.id}" value="${d.cuotas_pendientes != null ? d.cuotas_pendientes : (d.cantidad_cuotas || 0)}"></div>
@@ -566,6 +578,7 @@ async function loadDeudas() {
         tasa_interes: parseFloat(document.getElementById('eTasa-' + id).value) || 0,
         pago_mensual: parseFloat(document.getElementById('ePagoMensual-' + id).value) || 0,
         cantidad_cuotas: parseInt(document.getElementById('eCantCuotas-' + id).value) || 0,
+        temporalidad: document.getElementById('eFrecuencia-' + id).value,
         monto_restante: parseFloat(document.getElementById('eSaldoActual-' + id).value) || 0,
         cuotas_pendientes: parseInt(document.getElementById('eCuotasPendientes-' + id).value) || 0
       };
@@ -617,7 +630,7 @@ document.getElementById('addDeudaBtn').addEventListener('click', async () => {
     monto_restante: saldoActualInput !== '' ? parseFloat(saldoActualInput) : montoAprobado,
     cuotas_pendientes: cuotasPendientesInput !== '' ? parseInt(cuotasPendientesInput) : cantCuotas,
     fecha_inicio: document.getElementById('dFechaInicio').value || null,
-    temporalidad: 'mensual'
+    temporalidad: document.getElementById('dFrecuencia').value
   };
   const { error } = await sb.from('deudas').insert(payload);
   if (error) { showToast('No se pudo agregar.', '⚠️'); return; }
@@ -918,21 +931,26 @@ async function renderStats() {
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
 
-  // Cuánto pagas al mes: cada deuda aporta su pago_mensual mientras le queden cuotas
-  const mesesRestantesDe = d => {
+  // Cuánto pagas al mes: cada deuda aporta su pago mientras le queden cuotas (ajustado por frecuencia)
+  const cuotasRestantesDe = d => {
     if (d.tipo === 'automatica') return calcAutomatica(d).pendientes;
     const misPagos = pagosSorted.filter(p => p.id_deuda === d.id);
     const totalPagado = misPagos.reduce((s, p) => s + (p.monto_pagado || 0), 0);
     const restanteD = Math.max(0, (d.monto_aprobado || 0) - totalPagado);
     return d.pago_mensual > 0 ? Math.ceil(restanteD / d.pago_mensual) : 0;
   };
+  const mesesRestantesDe = d => {
+    const cuotas = cuotasRestantesDe(d);
+    return d.temporalidad === 'quincenal' ? Math.ceil(cuotas / 2) : cuotas;
+  };
+  const aportePorMesDe = d => (d.temporalidad === 'quincenal' ? (d.pago_mensual || 0) * 2 : (d.pago_mensual || 0));
   const maxMeses = (deudas || []).length ? Math.max(0, ...(deudas || []).map(mesesRestantesDe)) : 0;
   const cuotaLabels = [];
   const cuotaData = [];
   for (let m = 0; m <= maxMeses; m++) {
     const fecha = new Date(hoyCombo + 'T00:00:00');
     fecha.setMonth(fecha.getMonth() + m);
-    const totalMes = (deudas || []).reduce((s, d) => s + (m < mesesRestantesDe(d) ? (d.pago_mensual || 0) : 0), 0);
+    const totalMes = (deudas || []).reduce((s, d) => s + (m < mesesRestantesDe(d) ? aportePorMesDe(d) : 0), 0);
     cuotaLabels.push(fecha.toISOString().slice(0,10));
     cuotaData.push(totalMes);
   }
