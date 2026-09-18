@@ -869,10 +869,6 @@ async function renderStats() {
       <div class="chart-wrap"><canvas id="chartDeudaTotal"></canvas></div>
     </div>
     <div class="card">
-      <h2>Cada deuda por separado</h2>
-      <div class="chart-wrap"><canvas id="chartDeudaIndividual"></canvas></div>
-    </div>
-    <div class="card">
       <h2>Tus cuentas en el tiempo</h2>
       <div class="chart-wrap"><canvas id="chartCuentas"></canvas></div>
     </div>
@@ -926,41 +922,6 @@ async function renderStats() {
   });
 
   // Individual deuda lines: each deuda's own restante over time, from its own payments
-  destroyChart('deudaIndividual');
-  const coloresDeuda = ['#89023E','#CC7178','#6B8F5A','#8C5A63','#B8546B','#4A0A28'];
-  const hoyStats = todayStr();
-  const deudaIndividualDatasets = (deudas || []).map((d, i) => {
-    let puntos;
-    if (d.tipo === 'automatica') {
-      puntos = [];
-      const c = calcAutomatica(d);
-      const hoyDate = new Date(hoyStats + 'T00:00:00');
-      for (let m = 0; m <= c.pendientes; m++) {
-        const fecha = new Date(hoyDate);
-        fecha.setMonth(fecha.getMonth() + m);
-        const restanteEnMes = Math.max(0, c.restante - m * (d.pago_mensual || 0));
-        puntos.push({ x: fecha.toISOString().slice(0,10), y: restanteEnMes });
-      }
-      if (puntos.length === 0) puntos.push({ x: hoyStats, y: c.restante });
-    } else {
-      const misPagos = pagosSorted.filter(p => p.id_deuda === d.id);
-      let acc = 0;
-      puntos = misPagos.map(p => {
-        acc += (p.monto_pagado || 0);
-        return { x: p.fecha, y: Math.max(0, (d.monto_aprobado || 0) - acc) };
-      });
-      if (puntos.length === 0) {
-        puntos.push({ x: hoyStats, y: d.monto_aprobado || 0 });
-      }
-    }
-    return { label: d.nombre + (d.tipo === 'automatica' ? ' (proyectado)' : ''), data: puntos, borderColor: coloresDeuda[i % coloresDeuda.length], tension: 0.2 };
-  });
-  charts.deudaIndividual = new Chart(document.getElementById('chartDeudaIndividual'), {
-    type: 'line',
-    data: { datasets: deudaIndividualDatasets },
-    options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'category' } } }
-  });
-
   // Cuentas: one line per cuenta over time
   destroyChart('cuentas');
   const cuentaDatasets = (cuentas || []).map((c, i) => {
@@ -974,12 +935,24 @@ async function renderStats() {
     options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'category' } } }
   });
 
-  // Tarjeta saldo_corte over time
+  // Tarjeta: saldo al día en el tiempo, Q y $ como líneas separadas
   destroyChart('tarjeta');
-  const tarjetaDatasets = (tarjetas || []).map((t, i) => {
+  const coloresTarjeta = ['#CC7178', '#89023E', '#6B8F5A', '#8C5A63'];
+  const tarjetaDatasets = [];
+  (tarjetas || []).forEach((t, i) => {
     const puntos = (saldosTarjeta || []).filter(s => s.id_tarjeta === t.id).sort((a,b)=>a.fecha.localeCompare(b.fecha));
-    const colores = ['#CC7178','#89023E'];
-    return { label: t.nombre, data: puntos.map(p => ({x: p.fecha, y: p.saldo_corte})), borderColor: colores[i % colores.length], tension: 0.2 };
+    tarjetaDatasets.push({
+      label: t.nombre + ' (Q)',
+      data: puntos.map(p => ({x: p.fecha, y: (p.saldo_dia || p.saldo_corte || 0)})),
+      borderColor: coloresTarjeta[(i*2) % coloresTarjeta.length],
+      tension: 0.2
+    });
+    tarjetaDatasets.push({
+      label: t.nombre + ' ($)',
+      data: puntos.map(p => ({x: p.fecha, y: (p.saldo_dia_usd || p.saldo_corte_usd || 0)})),
+      borderColor: coloresTarjeta[(i*2+1) % coloresTarjeta.length],
+      tension: 0.2
+    });
   });
   charts.tarjeta = new Chart(document.getElementById('chartTarjeta'), {
     type: 'line',
