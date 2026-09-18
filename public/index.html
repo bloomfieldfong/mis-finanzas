@@ -68,7 +68,7 @@
   .bar-track { height: 10px; background: var(--ochre-soft); border-radius: 999px; overflow: hidden; margin: 6px 0; }
   .bar-fill { height: 100%; background: var(--sage); border-radius: 999px; }
   .row2 { display: flex; gap: 8px; }
-  .row2 > * { flex: 1; }
+  .row2 > * { flex: 1; height: 42px; box-sizing: border-box; }
   .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--teal-dark); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; max-width: 90%; text-align: center; z-index: 50; }
   .toast.show { opacity: 1; }
   .footer-note { text-align: center; font-size: 0.75rem; color: var(--ink-soft); margin-top: 18px; }
@@ -490,7 +490,7 @@ async function loadGastos() {
       </div>
       <div class="row2" style="margin-top:8px;">
         <input type="number" placeholder="Monto (ej. una clase)" id="pagoGasto-${g.id}" value="${g.monto || ''}">
-        <button class="primary small" data-id="${g.id}" data-action="addPagoGasto">+ Agregar pago</button>
+        <button class="primary" data-id="${g.id}" data-action="addPagoGasto">+ Agregar pago</button>
       </div>
       ${pagosEstePeriodo.length ? `<button class="ghost small" data-id="${g.id}" data-action="undoPagoGasto" style="margin-top:6px;">Deshacer último pago</button>` : ''}
     `;
@@ -629,7 +629,7 @@ async function loadDeudas() {
       pagoRowHtml = `
       <div class="row2">
         <input type="number" placeholder="Monto del pago" id="pagoMonto-${d.id}">
-        <button class="primary small" data-id="${d.id}" data-action="addPago">+ Pago</button>
+        <button class="primary" data-id="${d.id}" data-action="addPago">+ Pago</button>
       </div>`;
     }
     const esQuincenal = d.temporalidad === 'quincenal';
@@ -792,7 +792,7 @@ async function loadCuentas() {
       ${deltaHtml}
       <div class="row2">
         <input type="number" placeholder="Saldo de hoy" id="saldoMonto-${c.id}">
-        <button class="primary small" data-id="${c.id}" data-action="addSaldo">Guardar</button>
+        <button class="primary" data-id="${c.id}" data-action="addSaldo">Guardar</button>
       </div>
       <div class="row2" style="margin-top:8px;">
         <button class="danger-ghost small" data-id="${c.id}" data-action="delCuenta">Eliminar cuenta</button>
@@ -893,7 +893,7 @@ async function loadTarjetas() {
       <div class="item-sub" style="color:var(--sage);">Ya pagaste ${fmt(totalPagado)} desde entonces → debes ${fmt(saldoActual)}</div>
       <div class="row2">
         <input type="number" placeholder="Monto del pago (Q)" id="pagoTarjeta-${t.id}">
-        <button class="primary small" data-id="${t.id}" data-action="addPagoTarjeta">+ Pago</button>
+        <button class="primary" data-id="${t.id}" data-action="addPagoTarjeta">+ Pago</button>
       </div>` : `<div class="item-sub">Sin corte registrado todavía.</div>`}
       <div class="row2" style="margin-top:8px;">
         <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo corte (Q)</label><input type="number" id="scorte-${t.id}"></div>
