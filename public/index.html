@@ -153,13 +153,13 @@
         <div id="rPagoMinimo" style="margin-top:10px;"></div>
         <div class="item-sub" id="rPrioridad" style="margin-top:6px;"></div>
       </div>
-      <p class="sub">¿Qué pasó? Elige una opción y ya.</p>
+      <p class="sub">Elige una opción.</p>
       <div class="card">
         <div class="quick-actions-grid">
-          <button class="quick-action" id="btnShowIngreso"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="12" cy="15" r="2"/></svg></span><span class="qa-label">Metí dinero a una cuenta</span></button>
+          <button class="quick-action" id="btnShowIngreso"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="12" cy="15" r="2"/></svg></span><span class="qa-label">Me llego dinerito</span></button>
           <button class="quick-action" id="btnShowPago"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg></span><span class="qa-label">Pagué algo de una deuda</span></button>
           <button class="quick-action" id="btnShowCorte"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/></svg></span><span class="qa-label">Actualicé mi tarjeta</span></button>
-          <button class="quick-action" id="btnShowMovimiento"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13l-3-3"/><path d="M20 17H7l3 3"/></svg></span><span class="qa-label">Moví dinero entre cuentas</span></button>
+          <button class="quick-action" id="btnShowMovimiento"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13l-3-3"/><path d="M20 17H7l3 3"/></svg></span><span class="qa-label">Movimiento de dinero</span></button>
         </div>
         <div id="formIngreso" class="collapsible">
           <label class="field">¿Cuál cuenta?</label>
@@ -247,7 +247,7 @@
           <label class="field">Tipo</label>
           <select id="dTipo">
             <option value="manual">✋ Manual (yo registro cada pago)</option>
-            <option value="automatica">🔁 Automática (se descuenta sola cada mes)</option>
+            <option value="automatica"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg> Automática (se descuenta sola cada mes)</option>
           </select>
           <label class="field">Nombre</label>
           <input type="text" id="dNombre" placeholder="Extrafinanciamiento #50">
