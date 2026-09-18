@@ -246,8 +246,8 @@
           <h2>Nueva deuda</h2>
           <label class="field">Tipo</label>
           <select id="dTipo">
-            <option value="manual">✋ Manual (yo registro cada pago)</option>
-            <option value="automatica"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg> Automática (se descuenta sola cada mes)</option>
+            <option value="manual">Manual</option>
+            <option value="automatica">Automática</option>
           </select>
           <label class="field">Nombre</label>
           <input type="text" id="dNombre" placeholder="Extrafinanciamiento #50">
@@ -658,7 +658,7 @@ async function loadDeudas() {
       pagoRowHtml = `
       <div class="row2">
         <input type="number" placeholder="Monto del pago" id="pagoMonto-${d.id}">
-        <button class="primary" data-id="${d.id}" data-action="addPago">+ Pago</button>
+        <button class="primary" data-id="${d.id}" data-action="addPago">+ Agregar Pago</button>
       </div>`;
     }
     const esQuincenal = d.temporalidad === 'quincenal';
@@ -931,7 +931,7 @@ async function loadTarjetas() {
       <div class="item-sub" style="color:var(--sage);">Ya pagaste ${fmt(totalPagado)} desde entonces → debes ${fmt(saldoActual)}</div>
       <div class="row2">
         <input type="number" placeholder="Monto del pago (Q)" id="pagoTarjeta-${t.id}">
-        <button class="primary" data-id="${t.id}" data-action="addPagoTarjeta">+ Pago</button>
+        <button class="primary" data-id="${t.id}" data-action="addPagoTarjeta">+ Agregar Pago</button>
       </div>` : `<div class="item-sub">Sin corte registrado todavía.</div>`}
       <div class="row2" style="margin-top:8px;">
         <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo corte (Q)</label><input type="number" id="scorte-${t.id}"></div>
