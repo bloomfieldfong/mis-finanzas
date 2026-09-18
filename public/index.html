@@ -793,8 +793,10 @@ async function loadCuentas() {
         <input type="number" placeholder="Saldo de hoy" id="saldoMonto-${c.id}">
         <button class="primary small" data-id="${c.id}" data-action="addSaldo">Guardar</button>
       </div>
-      <button class="danger-ghost small" data-id="${c.id}" data-action="delCuenta" style="margin-top:8px;">Eliminar cuenta</button>
-      <button class="ghost small" data-id="${c.id}" data-action="toggleEditCuenta" style="margin-top:8px;">Editar apodo</button>
+      <div class="row2" style="margin-top:8px;">
+      <button class="danger-ghost small" data-id="${c.id}" data-action="delCuenta">Eliminar cuenta</button>
+      <button class="ghost small" data-id="${c.id}" data-action="toggleEditCuenta">Editar apodo</button>
+    </div>
       <div id="editCuenta-${c.id}" class="collapsible">
         <label class="field">Apodo</label>
         <input type="text" id="eNombreCuenta-${c.id}" value="${c.nombre || ''}">
