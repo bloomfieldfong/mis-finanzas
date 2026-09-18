@@ -504,8 +504,8 @@ async function loadGastos() {
       restore();
       if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
       showToast(g.id_cuenta ? 'Pago agregado y restado de tu cuenta.' : 'Pago agregado.');
-      loadGastos();
-      loadCuentas();
+      await loadGastos();
+      await loadCuentas();
       renderInicio();
     });
   });
@@ -525,8 +525,8 @@ async function loadGastos() {
         }
       }
       showToast('Último pago devuelto.');
-      loadGastos();
-      loadCuentas();
+      await loadGastos();
+      await loadCuentas();
       renderInicio();
     });
   });
@@ -759,7 +759,7 @@ document.getElementById('addDeudaBtn').addEventListener('click', async () => {
 async function loadCuentas() {
   const { data: cuentas } = await sb.from('cuentas').select('*').order('id');
   cacheCuentas = cuentas || [];
-  const { data: saldos } = await sb.from('saldos_cuentas').select('*').order('fecha', { ascending: false });
+  const { data: saldos } = await sb.from('saldos_cuentas').select('*').order('fecha', { ascending: false }).order('id', { ascending: false });
   cacheSaldosCuentas = saldos || [];
   const listEl = document.getElementById('cuentasList');
   listEl.innerHTML = '';
@@ -858,7 +858,7 @@ document.getElementById('addCuentaBtn').addEventListener('click', async () => {
 async function loadTarjetas() {
   const { data: tarjetas } = await sb.from('tarjetas').select('*').order('id');
   cacheTarjetas = tarjetas || [];
-  const { data: saldos } = await sb.from('saldos').select('*').order('fecha', { ascending: false });
+  const { data: saldos } = await sb.from('saldos').select('*').order('fecha', { ascending: false }).order('id', { ascending: false });
   cacheSaldosTarjeta = saldos || [];
   const { data: pagosTarjeta } = await sb.from('pagos_tarjeta').select('*');
   cachePagosTarjeta = pagosTarjeta || [];
@@ -1276,7 +1276,8 @@ document.getElementById('qCuentaSave').addEventListener('click', async () => {
   if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
   showToast('Saldo guardado.');
   document.getElementById('qCuentaMonto').value = '';
-  loadCuentas();
+  await loadCuentas();
+  renderInicio();
 });
 
 document.getElementById('qDeudaSave').addEventListener('click', async () => {
@@ -1289,7 +1290,8 @@ document.getElementById('qDeudaSave').addEventListener('click', async () => {
   await syncDeudaRestante(idDeuda);
   showToast('Pago registrado.');
   document.getElementById('qDeudaMonto').value = '';
-  loadDeudas();
+  await loadDeudas();
+  renderInicio();
 });
 
 document.getElementById('qCorteSave').addEventListener('click', async () => {
@@ -1312,7 +1314,8 @@ document.getElementById('qCorteSave').addEventListener('click', async () => {
   if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
   showToast('Corte guardado.');
   ['qCorteSaldo','qCorteSaldoUSD','qCorteSaldoDia','qCorteSaldoDiaUSD','qCortePMin','qCortePMinUSD','qCortePContado','qCortePContadoUSD'].forEach(id => document.getElementById(id).value = '');
-  loadTarjetas();
+  await loadTarjetas();
+  renderInicio();
 });
 
 document.getElementById('qMovSave').addEventListener('click', async () => {
@@ -1335,7 +1338,7 @@ document.getElementById('qMovSave').addEventListener('click', async () => {
   showToast('Movimiento registrado.');
   document.getElementById('qMovMonto').value = '';
   document.getElementById('formMovimiento').classList.remove('open');
-  loadCuentas();
+  await loadCuentas();
   renderInicio();
 });
 
