@@ -87,7 +87,6 @@
       <input type="password" id="authPass" placeholder="••••••••">
       <div class="error-text" id="authError" style="display:none;"></div>
       <button class="primary" id="authSubmitBtn">Entrar</button>
-      <div class="toggle-link" id="authToggle">¿No tienes cuenta? Regístrate</div>
     </div>
   </div>
 
@@ -297,7 +296,6 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let isSignUp = false;
 let charts = {};
 let cacheDeudas = [], cacheCuentas = [], cacheTarjetas = [], cacheGastos = [], cacheGastosPagos = [];
 let cacheSaldosCuentas = [], cacheSaldosTarjeta = [], cachePagosTarjeta = [];
@@ -320,17 +318,8 @@ function showToast(msg, icon) {
 const authView = document.getElementById('authView');
 const mainView = document.getElementById('mainView');
 const authError = document.getElementById('authError');
-const authToggle = document.getElementById('authToggle');
 const authSubmitBtn = document.getElementById('authSubmitBtn');
 const authSub = document.getElementById('authSub');
-
-authToggle.addEventListener('click', () => {
-  isSignUp = !isSignUp;
-  authSubmitBtn.textContent = isSignUp ? 'Crear cuenta' : 'Entrar';
-  authToggle.textContent = isSignUp ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate';
-  authSub.textContent = isSignUp ? 'Crea tu cuenta con tu correo.' : 'Inicia sesión con tu correo.';
-  authError.style.display = 'none';
-});
 
 authSubmitBtn.addEventListener('click', async () => {
   const email = document.getElementById('authEmail').value.trim();
@@ -342,14 +331,8 @@ authSubmitBtn.addEventListener('click', async () => {
     return;
   }
   try {
-    if (isSignUp) {
-      const { error } = await sb.auth.signUp({ email, password });
-      if (error) throw error;
-      showToast('Cuenta creada. Ya puedes usar la app.');
-    } else {
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-    }
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) throw error;
     await checkSession();
   } catch (e) {
     authError.textContent = e.message || 'Algo salió mal.';
