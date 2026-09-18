@@ -420,17 +420,18 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // ---------- GASTOS FIJOS ----------
 function currentPeriodKey(frecuencia, fecha) {
-  const d = new Date(fecha);
+  const [y, m, dia] = fecha.split('-').map(Number);
   if (frecuencia === 'cuotas') return 'sin-reinicio';
-  if (frecuencia === 'mensual') return d.getFullYear() + '-' + (d.getMonth()+1);
+  if (frecuencia === 'mensual') return y + '-' + m;
   if (frecuencia === 'semanal') {
-    const inicioAno = new Date(d.getFullYear(), 0, 1);
+    const d = new Date(y, m - 1, dia);
+    const inicioAno = new Date(y, 0, 1);
     const dias = Math.floor((d - inicioAno) / (1000*60*60*24));
     const semana = Math.floor(dias / 7);
-    return d.getFullYear() + '-sem' + semana;
+    return y + '-sem' + semana;
   }
-  const half = d.getDate() <= 15 ? 'a' : 'b';
-  return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + half;
+  const half = dia <= 15 ? 'a' : 'b';
+  return y + '-' + m + '-' + half;
 }
 
 async function loadGastos() {
@@ -1131,7 +1132,13 @@ async function renderStats() {
 function populateSelect(selectEl, items, labelFn) {
   selectEl.innerHTML = items.map(it => `<option value="${it.id}">${labelFn(it)}</option>`).join('');
 }
-function todayStr() { return new Date().toISOString().slice(0,10); }
+function todayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
 
 function renderInicio() {
   populateSelect(document.getElementById('qCuenta'), cacheCuentas, c => accountLabel(c));
