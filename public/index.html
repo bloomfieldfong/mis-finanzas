@@ -117,6 +117,16 @@
 </head>
 <body>
 <div class="wrap" id="app">
+  <div id="pinView" class="auth-box" style="display:none;">
+    <div class="logo-row"><div class="logo-mark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.5-9.5-9C1 8.5 2.5 5 6 5c2 0 3.5 1.2 4 2.2C10.5 6.2 12 5 14 5c3.5 0 5 3.5 3.5 7-2.5 4.5-9.5 9-9.5 9z"/></svg></div><h1>girl math</h1></div>
+    <p class="sub" id="pinSub">Ingresa tu PIN.</p>
+    <div class="card">
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" id="pinInput" placeholder="••••" style="text-align:center; font-size:1.4rem; letter-spacing:8px;">
+      <div class="error-text" id="pinError" style="display:none;"></div>
+      <button class="primary" id="pinSubmitBtn">Entrar</button>
+      <p class="toggle-link" id="pinForgotLink" style="display:none;">¿Olvidaste tu PIN?</p>
+    </div>
+  </div>
   <div id="authView" class="auth-box" style="display:none;">
     <div class="logo-row"><div class="logo-mark"><svg viewBox="0 0 24 24" fill="#fff">
   <path d="M12 20.5C11.5 20 3 14 3 8.5C3 5.5 5.2 3.5 8 3.5C9.8 3.5 11.2 4.4 12 5.8C12.8 4.4 14.2 3.5 16 3.5C18.8 3.5 21 5.5 21 8.5C21 14 12.5 20 12 20.5Z"/>
@@ -156,6 +166,10 @@
 
     <!-- INICIO -->
     <div class="panel active" id="panel-inicio">
+      <div class="card" style="text-align:center; background:linear-gradient(135deg, var(--teal), var(--teal-dark)); box-shadow:0 8px 22px rgba(137,2,62,0.28); margin-bottom:14px;">
+        <div style="font-size:0.8rem; color:rgba(255,255,255,0.85); margin-bottom:2px;">Patrimonio neto (Q)</div>
+        <div style="font-family:'Fraunces', serif; font-weight:600; font-size:2rem; color:#fff;" id="rPatrimonioNeto">Q0</div>
+      </div>
       <div class="metric-grid">
         <div class="metric-card">
           <div class="metric-label">Cuentas (día a día)</div>
@@ -613,6 +627,7 @@ async function loadGastosVariables() {
   cacheGastosVariables.forEach(g => {
     const cuenta = cacheCuentas.find(c => c.id === g.id_cuenta);
     const meta = gastoCategoriaMeta(g.categoria);
+    const catOptions = Object.entries(GASTO_CATEGORIAS).map(([key, val]) => `<option value="${key}" ${g.categoria === key ? 'selected' : ''}>${val.label}</option>`).join('');
     const div = document.createElement('div');
     div.className = 'item';
     div.innerHTML = `
@@ -622,12 +637,50 @@ async function loadGastosVariables() {
           <div class="item-title" style="font-size:0.95rem;">${fmt(g.monto, cuenta ? cuenta.currency : 'Q')}</div>
           <div class="item-sub">${meta.label}${cuenta ? ' · ' + accountLabel(cuenta) : ''} · ${g.fecha}</div>
         </div>
-        <button class="danger-ghost small icon-btn" data-id="${g.id}" title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
+        <div style="display:flex; gap:6px;">
+          <button class="ghost small icon-btn" style="margin-top:0" data-action="toggleEditGastoVar" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l4 4"/></svg></button>
+          <button class="danger-ghost small icon-btn" data-action="delGastoVar" title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
+        </div>
+      </div>
+      <div class="collapsible">
+        <label class="field">Monto</label>
+        <input type="number" value="${g.monto}" class="editGvMonto">
+        <label class="field">Categoría</label>
+        <select class="editGvCategoria">${catOptions}</select>
+        <label class="field">Cuenta</label>
+        <select class="editGvCuenta"></select>
+        <button class="primary small" data-action="saveGastoVar">Guardar cambios</button>
       </div>
     `;
     listEl.appendChild(div);
-    div.querySelector('button').addEventListener('click', () => {
-      deleteWithConfirmAndUndo(div.querySelector('button'), 'este gasto', async () => {
+    const editCollapsible = div.querySelector('.collapsible');
+    populateSelect(div.querySelector('.editGvCuenta'), cacheCuentas, c => accountLabel(c));
+    div.querySelector('.editGvCuenta').value = g.id_cuenta || '';
+    div.querySelector('[data-action="toggleEditGastoVar"]').addEventListener('click', () => editCollapsible.classList.toggle('open'));
+    div.querySelector('[data-action="saveGastoVar"]').addEventListener('click', async () => {
+      const nuevoMonto = parseFloat(div.querySelector('.editGvMonto').value);
+      const nuevaCategoria = div.querySelector('.editGvCategoria').value;
+      const nuevoIdCuenta = parseInt(div.querySelector('.editGvCuenta').value) || null;
+      if (!nuevoMonto || nuevoMonto <= 0) { showToast('Metele un monto válido.', '⚠️'); return; }
+      const { error } = await sb.from('gastos_variables').update({ monto: nuevoMonto, categoria: nuevaCategoria, id_cuenta: nuevoIdCuenta }).eq('id', g.id);
+      if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
+      // Revertir el efecto viejo en la cuenta vieja, aplicar el nuevo en la cuenta nueva
+      if (g.id_cuenta) {
+        const s1 = cacheSaldosCuentas.find(s => s.id_cuenta === g.id_cuenta);
+        await sb.from('saldos_cuentas').insert({ id_cuenta: g.id_cuenta, monto: (s1 ? s1.monto : 0) + g.monto, fecha: todayStr() });
+      }
+      if (nuevoIdCuenta) {
+        const s2 = cacheSaldosCuentas.find(s => s.id_cuenta === nuevoIdCuenta);
+        const base = nuevoIdCuenta === g.id_cuenta ? (s2 ? s2.monto : 0) + g.monto : (s2 ? s2.monto : 0);
+        await sb.from('saldos_cuentas').insert({ id_cuenta: nuevoIdCuenta, monto: base - nuevoMonto, fecha: todayStr() });
+      }
+      showToast('Gasto actualizado.');
+      await loadCuentas();
+      await loadGastosVariables();
+      renderInicio();
+    });
+    div.querySelector('[data-action="delGastoVar"]').addEventListener('click', () => {
+      deleteWithConfirmAndUndo(div.querySelector('[data-action="delGastoVar"]'), 'este gasto', async () => {
         await sb.from('gastos_variables').delete().eq('id', g.id);
         if (g.id_cuenta) {
           const ultimoSaldo = cacheSaldosCuentas.find(s => s.id_cuenta === g.id_cuenta);
@@ -829,7 +882,8 @@ async function loadDeudas() {
       totalPagado = c.pagado;
       restante = c.restante;
       cuotasRestantes = c.pendientes;
-      pagoRowHtml = `<div class="item-sub">🔁 Automática — cuota ${c.transcurridas} de ${d.cantidad_cuotas || 0}, se descuenta sola.</div>`;
+      pagoRowHtml = `<div class="item-sub">🔁 Automática — cuota ${c.transcurridas} de ${d.cantidad_cuotas || 0}, se descuenta sola.</div>
+      ${c.pendientes > 0 ? `<button class="ghost small" style="margin-top:0" data-id="${d.id}" data-action="registrarCuotaAuto">✓ Ya se descontó esta cuota</button>` : ''}`;
     } else {
       const misPagos = (pagos || []).filter(p => p.id_deuda === d.id);
       totalPagado = misPagos.reduce((s, p) => s + (p.monto_pagado || 0), 0);
@@ -929,6 +983,20 @@ async function loadDeudas() {
       if (error) { showToast('No se pudo guardar el pago.', '⚠️'); return; }
       await syncDeudaRestante(id);
       showToast('Pago registrado.');
+      loadDeudas();
+    });
+  });
+  listEl.querySelectorAll('[data-action="registrarCuotaAuto"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.dataset.id);
+      const d = cacheDeudas.find(x => x.id === id);
+      if (!d) return;
+      const c = calcAutomatica(d);
+      const nuevoPendientes = Math.max(0, c.pendientes - 1);
+      const nuevoRestante = Math.max(0, c.restante - (d.pago_mensual || 0));
+      const { error } = await sb.from('deudas').update({ cuotas_pendientes: nuevoPendientes, monto_restante: nuevoRestante }).eq('id', id);
+      if (error) { showToast('No se pudo actualizar.', '⚠️'); return; }
+      showToast('Cuota registrada.');
       loadDeudas();
     });
   });
@@ -1223,6 +1291,10 @@ async function renderStats() {
       <div id="categoriasLegend"></div>
     </div>
     <div class="card">
+      <h2>Este mes vs. mes anterior</h2>
+      <div id="comparacionMesesLegend"></div>
+    </div>
+    <div class="card">
       <h2>Deuda total restante</h2>
       <div class="chart-wrap"><canvas id="chartDeudaTotal"></canvas></div>
     </div>
@@ -1280,6 +1352,41 @@ async function renderStats() {
         return `<div class="stat-line"><span><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; margin-right:6px;"></span>${gastoCategoriaMeta(cat).label}</span><strong>${fmt(monto)} (${pct}%)</strong></div>`;
       }).join('');
     document.getElementById('categoriasLegend').innerHTML = legendHtml;
+  }
+
+  // Este mes vs. mes anterior, por categoría
+  const now = new Date();
+  const curMonthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const prevDateObj = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonthKey = prevDateObj.getFullYear() + '-' + String(prevDateObj.getMonth() + 1).padStart(2, '0');
+  const totalesMesActual = {}, totalesMesAnterior = {};
+  (gastosVarAll || []).forEach(g => {
+    const mk = (g.fecha || '').slice(0, 7);
+    const cat = g.categoria || 'otro';
+    if (mk === curMonthKey) totalesMesActual[cat] = (totalesMesActual[cat] || 0) + (g.monto || 0);
+    if (mk === prevMonthKey) totalesMesAnterior[cat] = (totalesMesAnterior[cat] || 0) + (g.monto || 0);
+  });
+  const categoriasComparacion = [...new Set([...Object.keys(totalesMesActual), ...Object.keys(totalesMesAnterior)])];
+  if (categoriasComparacion.length === 0) {
+    document.getElementById('comparacionMesesLegend').innerHTML = '<p class="item-sub">Todavía no hay suficientes gastos para comparar.</p>';
+  } else {
+    const compHtml = categoriasComparacion
+      .map(cat => ({ cat, actual: totalesMesActual[cat] || 0, anterior: totalesMesAnterior[cat] || 0 }))
+      .sort((a, b) => b.actual - a.actual)
+      .map(({ cat, actual, anterior }) => {
+        let deltaHtml;
+        if (anterior > 0) {
+          const pct = Math.round(((actual - anterior) / anterior) * 100);
+          const subio = pct > 0;
+          deltaHtml = `<span style="color:${subio ? 'var(--ochre)' : 'var(--sage)'};">${subio ? '+' : ''}${pct}%</span>`;
+        } else if (actual > 0) {
+          deltaHtml = `<span style="color:var(--ink-soft);">nuevo este mes</span>`;
+        } else {
+          deltaHtml = `<span style="color:var(--sage);">-100%</span>`;
+        }
+        return `<div class="stat-line"><span>${gastoCategoriaMeta(cat).label}</span><span>${fmt(actual)} vs ${fmt(anterior)} · ${deltaHtml}</span></div>`;
+      }).join('');
+    document.getElementById('comparacionMesesLegend').innerHTML = compHtml;
   }
 
   // Deuda total restante: pasado real (manuales) + hoy + proyección futura (automáticas)
@@ -1428,6 +1535,14 @@ async function renderStats() {
 function populateSelect(selectEl, items, labelFn) {
   selectEl.innerHTML = items.map(it => `<option value="${it.id}">${labelFn(it)}</option>`).join('');
 }
+function tarjetaSaldoActualQ(t) {
+  const ultimoSaldo = cacheSaldosTarjeta.find(s => s.id_tarjeta === t.id);
+  if (!ultimoSaldo) return 0;
+  const pagosDesdeCorte = cachePagosTarjeta.filter(p => p.id_tarjeta === t.id && p.fecha >= ultimoSaldo.fecha);
+  const totalPagado = pagosDesdeCorte.reduce((s, p) => s + (p.monto || 0), 0);
+  const saldoDiaBase = ultimoSaldo.saldo_dia || ultimoSaldo.saldo_corte || 0;
+  return Math.max(0, saldoDiaBase - totalPagado);
+}
 function todayStr() {
   const d = new Date();
   const y = d.getFullYear();
@@ -1495,15 +1610,12 @@ function renderInicio() {
   document.getElementById('rSobraPorCuenta').innerHTML = sobraHtml + sinAsignarHtml;
 
   // Tarjeta: saldo real (corte menos pagos hechos desde entonces), y día de corte/pago
+  const tarjetaTotalQ = cacheTarjetas.reduce((s, t) => s + tarjetaSaldoActualQ(t), 0);
   if (cacheTarjetas.length) {
     const t = cacheTarjetas[0];
     const ultimoSaldo = cacheSaldosTarjeta.find(s => s.id_tarjeta === t.id);
     if (ultimoSaldo) {
-      const pagosDesdeCorte = cachePagosTarjeta.filter(p => p.id_tarjeta === t.id && p.fecha >= ultimoSaldo.fecha);
-      const totalPagado = pagosDesdeCorte.reduce((s, p) => s + (p.monto || 0), 0);
-      const saldoDiaBase = ultimoSaldo.saldo_dia || ultimoSaldo.saldo_corte || 0;
-      const saldoActual = Math.max(0, saldoDiaBase - totalPagado);
-      document.getElementById('rTarjetaSaldo').textContent = fmt(saldoActual);
+      document.getElementById('rTarjetaSaldo').textContent = fmt(tarjetaSaldoActualQ(t));
       document.getElementById('rTarjetaSaldoUSD').textContent = fmt(ultimoSaldo.saldo_dia_usd || ultimoSaldo.saldo_corte_usd || 0, '$');
     } else {
       document.getElementById('rTarjetaSaldo').textContent = 'sin registrar';
@@ -1513,6 +1625,11 @@ function renderInicio() {
     document.getElementById('rTarjetaSaldo').textContent = '-';
     document.getElementById('rDiasPago').textContent = '-';
   }
+
+  // Patrimonio neto (en Q): cuentas día a día + ahorros Q - deuda total - tarjetas (saldos en $ no se convierten, quedan fuera de este número)
+  const patrimonioNeto = totalDiaADia + totalAhorroQ - deudaTotal - tarjetaTotalQ;
+  const pnEl = document.getElementById('rPatrimonioNeto');
+  if (pnEl) pnEl.textContent = fmt(patrimonioNeto);
 
   // Pagos mínimos de tarjetas: tabla con todas las tarjetas que tengan corte registrado
   const filasMinimos = cacheTarjetas.map(t => {
@@ -1671,7 +1788,78 @@ async function loadAll() {
   renderInicio();
 }
 
-checkSession();
+async function sha256Hex(text) {
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function initPinGate() {
+  const pinView = document.getElementById('pinView');
+  const pinInput = document.getElementById('pinInput');
+  const pinError = document.getElementById('pinError');
+  const pinSub = document.getElementById('pinSub');
+  const pinBtn = document.getElementById('pinSubmitBtn');
+  const storedHash = localStorage.getItem('gm_pin_hash');
+  const creating = !storedHash;
+  let firstPin = null;
+  pinView.style.display = 'block';
+  pinSub.textContent = creating ? 'Crea un PIN de 4 dígitos para proteger tu app.' : 'Ingresa tu PIN.';
+  const forgotLink = document.getElementById('pinForgotLink');
+  if (!creating) {
+    forgotLink.style.display = 'block';
+    forgotLink.addEventListener('click', () => {
+      if (confirm('Esto borra tu PIN actual y tendrás que crear uno nuevo. ¿Continuar?')) {
+        localStorage.removeItem('gm_pin_hash');
+        location.reload();
+      }
+    });
+  }
+
+  async function handleSubmit() {
+    const val = pinInput.value.trim();
+    pinError.style.display = 'none';
+    if (val.length !== 4 || !/^\d{4}$/.test(val)) {
+      pinError.textContent = 'El PIN debe tener 4 dígitos.';
+      pinError.style.display = 'block';
+      return;
+    }
+    if (creating) {
+      if (firstPin === null) {
+        firstPin = val;
+        pinInput.value = '';
+        pinSub.textContent = 'Confirma tu PIN.';
+        return;
+      }
+      if (val !== firstPin) {
+        pinError.textContent = 'No coinciden. Intenta de nuevo.';
+        pinError.style.display = 'block';
+        firstPin = null;
+        pinInput.value = '';
+        pinSub.textContent = 'Crea un PIN de 4 dígitos para proteger tu app.';
+        return;
+      }
+      localStorage.setItem('gm_pin_hash', await sha256Hex(val));
+      pinView.style.display = 'none';
+      checkSession();
+    } else {
+      const hash = await sha256Hex(val);
+      if (hash === storedHash) {
+        pinView.style.display = 'none';
+        checkSession();
+      } else {
+        pinError.textContent = 'PIN incorrecto.';
+        pinError.style.display = 'block';
+        pinInput.value = '';
+      }
+    }
+  }
+  pinBtn.addEventListener('click', handleSubmit);
+  pinInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSubmit(); });
+  pinInput.addEventListener('input', () => { if (pinInput.value.length === 4) handleSubmit(); });
+}
+
+initPinGate();
 sb.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') checkSession();
 });
