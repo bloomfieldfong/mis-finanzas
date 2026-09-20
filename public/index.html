@@ -321,7 +321,10 @@
     <!-- DEUDAS -->
     <div class="panel" id="panel-deudas">
       <div class="card">
-        <button class="ghost" id="btnShowSnowball">❄️ Calculadora "bola de nieve"</button>
+        <div class="row2">
+          <button class="ghost" id="btnShowSnowball">❄️ Bola de nieve</button>
+          <button class="ghost" id="btnShowNuevaDeuda">+ Agregar deuda</button>
+        </div>
         <div id="formSnowball" class="collapsible">
           <h2 style="font-size:1rem;">¿Qué es esto?</h2>
           <p class="sub">La estrategia "bola de nieve" es: paga el mínimo de todas tus deudas, y cualquier dinero extra mándalo completo a la deuda más chica hasta liquidarla. Cuando la liquidas, ese pago completo (mínimo + extra) lo mandas a la siguiente deuda más chica — así la "bola" crece cada vez que terminas una. Aquí simulamos cuánto tiempo y dinero en intereses te ahorra hacer esto, comparado con no meter nada extra.</p>
@@ -330,9 +333,6 @@
           <button class="primary" id="snowballCalcBtn">Calcular</button>
           <div id="snowballResult" style="margin-top:10px;"></div>
         </div>
-      </div>
-      <div class="card">
-        <button class="ghost" id="btnShowNuevaDeuda">+ Agregar deuda</button>
         <div id="formNuevaDeuda" class="collapsible">
           <h2>Nueva deuda</h2>
           <label class="field">Tipo</label>
