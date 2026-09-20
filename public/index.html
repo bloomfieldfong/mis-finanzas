@@ -1510,16 +1510,42 @@ function renderInicio() {
       const saldoActual = Math.max(0, saldoDiaBase - totalPagado);
       document.getElementById('rTarjetaSaldo').textContent = fmt(saldoActual);
       document.getElementById('rTarjetaSaldoUSD').textContent = fmt(ultimoSaldo.saldo_dia_usd || ultimoSaldo.saldo_corte_usd || 0, '$');
-      document.getElementById('rPagoMinimo').innerHTML = `<div style="background:var(--ochre); color:#fff; padding:12px 14px; border-radius:12px; font-weight:600; font-size:0.9rem; box-shadow:0 3px 10px rgba(224,87,122,0.35);"><svg width="17" height="17" viewBox="0 0 24 24" style="vertical-align:-3px"><circle cx="12" cy="12" r="10" fill="#fff"/><rect x="11" y="6" width="2" height="8" fill="var(--ochre)"/><rect x="11" y="16" width="2" height="2" fill="var(--ochre)"/></svg> El día ${t.fecha_pago || '-'} debes pagar mínimo: ${fmt(ultimoSaldo.pago_minimo || 0)} + ${fmt(ultimoSaldo.pago_minimo_usd || 0, '$')}</div>`;
     } else {
       document.getElementById('rTarjetaSaldo').textContent = 'sin registrar';
-      document.getElementById('rPagoMinimo').innerHTML = '';
     }
     document.getElementById('rDiasPago').textContent = 'Día ' + (t.fecha_pago || '-') + ' (corte día ' + (t.fecha_corte || '-') + ')';
   } else {
     document.getElementById('rTarjetaSaldo').textContent = '-';
     document.getElementById('rDiasPago').textContent = '-';
+  }
+
+  // Pagos mínimos de tarjetas: tabla con todas las tarjetas que tengan corte registrado
+  const filasMinimos = cacheTarjetas.map(t => {
+    const ultimoSaldo = cacheSaldosTarjeta.find(s => s.id_tarjeta === t.id);
+    if (!ultimoSaldo) return null;
+    return { nombre: t.nombre, fechaPago: t.fecha_pago || '-', minQ: ultimoSaldo.pago_minimo || 0, minUSD: ultimoSaldo.pago_minimo_usd || 0 };
+  }).filter(Boolean);
+  if (filasMinimos.length === 0) {
     document.getElementById('rPagoMinimo').innerHTML = '';
+  } else {
+    const filasHtml = filasMinimos.map(f => `
+      <tr>
+        <td style="padding:6px 4px; border-bottom:1px solid var(--line);">${f.nombre}</td>
+        <td style="padding:6px 4px; border-bottom:1px solid var(--line); color:var(--ink-soft);">Día ${f.fechaPago}</td>
+        <td style="padding:6px 4px; border-bottom:1px solid var(--line); text-align:right; font-weight:600; color:var(--ochre);">${fmt(f.minQ)}</td>
+        <td style="padding:6px 4px; border-bottom:1px solid var(--line); text-align:right; font-weight:600; color:var(--ochre);">${fmt(f.minUSD, '$')}</td>
+      </tr>`).join('');
+    document.getElementById('rPagoMinimo').innerHTML = `
+      <div class="item-sub" style="margin-bottom:4px;">${statusIconSvg('⚠️')} Pagos mínimos de tarjeta</div>
+      <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead>
+          <tr style="text-align:left; color:var(--ink-soft); font-size:0.76rem;">
+            <th style="padding:2px 4px;">Tarjeta</th><th style="padding:2px 4px;">Vence</th><th style="padding:2px 4px; text-align:right;">Mín. Q</th><th style="padding:2px 4px; text-align:right;">Mín. $</th>
+          </tr>
+        </thead>
+        <tbody>${filasHtml}</tbody>
+      </table>
+    `;
   }
 
   // Prioridad: deuda más chica con saldo pendiente
