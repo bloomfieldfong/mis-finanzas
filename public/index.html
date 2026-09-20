@@ -169,6 +169,7 @@
       <div class="card" style="text-align:center; background:linear-gradient(135deg, var(--teal), var(--teal-dark)); box-shadow:0 8px 22px rgba(137,2,62,0.28); margin-bottom:14px;">
         <div style="font-size:0.8rem; color:rgba(255,255,255,0.85); margin-bottom:2px;">Patrimonio neto (Q)</div>
         <div style="font-family:'Fraunces', serif; font-weight:600; font-size:2rem; color:#fff;" id="rPatrimonioNeto">Q0</div>
+        <div style="font-size:0.7rem; color:rgba(255,255,255,0.7); margin-top:2px;">Cuentas + ahorros − tarjeta (no incluye préstamos)</div>
       </div>
       <div class="metric-grid">
         <div class="metric-card">
@@ -883,7 +884,7 @@ async function loadDeudas() {
       restante = c.restante;
       cuotasRestantes = c.pendientes;
       pagoRowHtml = `<div class="item-sub">🔁 Automática — cuota ${c.transcurridas} de ${d.cantidad_cuotas || 0}, se descuenta sola.</div>
-      ${c.pendientes > 0 ? `<button class="ghost small" style="margin-top:0" data-id="${d.id}" data-action="registrarCuotaAuto">✓ Ya se descontó esta cuota</button>` : ''}`;
+      ${c.pendientes > 0 ? `<button class="primary" style="margin-top:8px;" data-id="${d.id}" data-action="registrarCuotaAuto">✓ Ya se descontó esta cuota</button>` : ''}`;
     } else {
       const misPagos = (pagos || []).filter(p => p.id_deuda === d.id);
       totalPagado = misPagos.reduce((s, p) => s + (p.monto_pagado || 0), 0);
@@ -1627,7 +1628,7 @@ function renderInicio() {
   }
 
   // Patrimonio neto (en Q): cuentas día a día + ahorros Q - deuda total - tarjetas (saldos en $ no se convierten, quedan fuera de este número)
-  const patrimonioNeto = totalDiaADia + totalAhorroQ - deudaTotal - tarjetaTotalQ;
+  const patrimonioNeto = totalDiaADia + totalAhorroQ - tarjetaTotalQ;
   const pnEl = document.getElementById('rPatrimonioNeto');
   if (pnEl) pnEl.textContent = fmt(patrimonioNeto);
 
