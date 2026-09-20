@@ -1486,12 +1486,7 @@ function renderInicio() {
   const sobraHtml = diaADiaCuentasList.map(c => {
     const ultimo = cacheSaldosCuentas.find(s => s.id_cuenta === c.id);
     const saldo = ultimo ? ultimo.monto : 0;
-    const gastosDeEstaCuenta = gastosPendientes.filter(g => g.id_cuenta === c.id);
-    const totalGastos = gastosDeEstaCuenta.reduce((s, g) => s + g.restante, 0);
-    const queda = saldo - totalGastos;
-    const detalle = gastosDeEstaCuenta.length ? gastosDeEstaCuenta.map(g => g.nombre + ' (falta ' + fmt(g.restante) + ')').join(', ') : 'sin gastos pendientes asignados';
-    return `<div class="stat-line"><span>${accountLabel(c)}</span><strong>${fmt(saldo)}</strong></div>
-      <div class="item-sub" style="margin:-2px 0 8px;">📋 ${detalle}${gastosDeEstaCuenta.length ? ' → te queda ' + fmt(queda) : ''}</div>`;
+    return `<div class="stat-line"><span>${accountLabel(c)}</span><strong>${fmt(saldo)}</strong></div>`;
   }).join('');
   const sinAsignar = gastosPendientes.filter(g => !g.id_cuenta);
   const sinAsignarHtml = sinAsignar.length
