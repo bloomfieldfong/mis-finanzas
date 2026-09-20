@@ -174,6 +174,8 @@
         <div class="metric-card">
           <div class="metric-label">Deuda total</div>
           <div class="metric-value" id="rDeuda">Q0</div>
+          <div class="metric-sub">Automáticas: <span id="rDeudaAuto">Q0</span></div>
+          <div class="metric-sub">Carro: <span id="rDeudaManual">Q0</span></div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Salto de tarjeta</div>
@@ -254,6 +256,10 @@
     <!-- GASTOS FIJOS -->
     <div class="panel" id="panel-gastos">
       <div class="card">
+        <h2 style="font-size:1rem;">🔥 Rachas sin gastar</h2>
+        <div id="rachasList"></div>
+      </div>
+      <div class="card">
         <h2 style="font-size:1rem;">Registrar un gasto</h2>
         <label class="field">¿De cuál cuenta pagaste?</label>
         <select id="gvCuenta"></select>
@@ -314,6 +320,14 @@
 
     <!-- DEUDAS -->
     <div class="panel" id="panel-deudas">
+      <div class="card">
+        <h2 style="font-size:1rem;">Calculadora "bola de nieve"</h2>
+        <p class="sub" style="margin-bottom:10px;">¿Cuánto te ahorras si le metes un extra al mes?</p>
+        <label class="field">Pago extra mensual (Q)</label>
+        <input type="number" inputmode="decimal" id="snowballExtra" placeholder="Ej. 500">
+        <button class="primary" id="snowballCalcBtn">Calcular</button>
+        <div id="snowballResult" style="margin-top:10px;"></div>
+      </div>
       <div class="card">
         <button class="ghost" id="btnShowNuevaDeuda">+ Agregar deuda</button>
         <div id="formNuevaDeuda" class="collapsible">
@@ -608,11 +622,37 @@ function currentPeriodKey(frecuencia, fecha) {
   return y + '-' + m + '-' + half;
 }
 
+async function renderRachas() {
+  const { data: allGV } = await sb.from('gastos_variables').select('categoria, fecha');
+  const lastByCat = {};
+  (allGV || []).forEach(g => {
+    const cat = g.categoria || 'otro';
+    if (!lastByCat[cat] || g.fecha > lastByCat[cat]) lastByCat[cat] = g.fecha;
+  });
+  const hoy = new Date(todayStr() + 'T00:00:00');
+  const rachas = Object.entries(lastByCat).map(([cat, fecha]) => {
+    const dias = Math.floor((hoy - new Date(fecha + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+    return { cat, dias };
+  }).filter(r => r.dias >= 0).sort((a, b) => b.dias - a.dias);
+  const el = document.getElementById('rachasList');
+  if (!el) return;
+  if (rachas.length === 0) {
+    el.innerHTML = '<p class="item-sub">Registra gastos para empezar a ver tus rachas.</p>';
+    return;
+  }
+  el.innerHTML = rachas.slice(0, 5).map(r => {
+    const meta = gastoCategoriaMeta(r.cat);
+    const texto = r.dias === 0 ? 'gastaste hoy' : r.dias + (r.dias === 1 ? ' día' : ' días') + ' sin gastar';
+    return `<div class="stat-line"><span>${meta.label}</span><strong style="color:${r.dias >= 7 ? 'var(--sage)' : 'var(--ink)'};">${texto}</strong></div>`;
+  }).join('');
+}
+
 async function loadGastosVariables() {
   populateSelect(document.getElementById('gvCuenta'), cacheCuentas, c => accountLabel(c));
   const { data: gastosVar } = await sb.from('gastos_variables').select('*').order('id', { ascending: false }).limit(20);
   cacheGastosVariables = gastosVar || [];
   document.getElementById('btnShowGastosVariables').textContent = `Ver gastos registrados (${cacheGastosVariables.length})`;
+  renderRachas();
   const listEl = document.getElementById('gastosVariablesList');
   listEl.innerHTML = '';
   cacheGastosVariables.forEach(g => {
@@ -826,6 +866,57 @@ document.getElementById('addGastoBtn').addEventListener('click', async () => {
 });
 
 // ---------- DEUDAS ----------
+function simulateSnowball(debts, extraMensual) {
+  let list = debts.map(d => ({ ...d }));
+  let months = 0;
+  let totalInterest = 0;
+  while (list.some(d => d.restante > 0.01) && months < 600) {
+    months++;
+    list.sort((a, b) => a.restante - b.restante);
+    let extra = extraMensual;
+    list.forEach(d => {
+      if (d.restante <= 0) return;
+      const monthlyRate = (d.tasaAnual || 0) / 100 / 12;
+      const interes = d.restante * monthlyRate;
+      totalInterest += interes;
+      let pago = d.pago_mensual || 0;
+      if (extra > 0) { pago += extra; extra = 0; }
+      d.restante = Math.max(0, d.restante + interes - pago);
+    });
+  }
+  return { months, totalInterest };
+}
+
+document.getElementById('snowballCalcBtn').addEventListener('click', () => {
+  const extra = parseFloat(document.getElementById('snowballExtra').value) || 0;
+  const debts = cacheDeudas
+    .map(d => ({
+      restante: d.monto_restante != null ? d.monto_restante : (d.monto_aprobado || 0),
+      pago_mensual: d.pago_mensual || 0,
+      tasaAnual: d.tasa_interes || 0
+    }))
+    .filter(d => d.restante > 0 && d.pago_mensual > 0);
+  const resultEl = document.getElementById('snowballResult');
+  if (debts.length === 0) {
+    resultEl.innerHTML = '<p class="item-sub">No tienes deudas pendientes con pago mensual definido.</p>';
+    return;
+  }
+  const base = simulateSnowball(debts, 0);
+  const conExtra = simulateSnowball(debts, extra);
+  if (base.months >= 600) {
+    resultEl.innerHTML = '<p class="item-sub">Con los pagos actuales, esto no se liquida en un tiempo razonable — revisa tus montos.</p>';
+    return;
+  }
+  const mesesAhorrados = base.months - conExtra.months;
+  const interesAhorrado = Math.max(0, base.totalInterest - conExtra.totalInterest);
+  resultEl.innerHTML = `
+    <div class="item-sub">Sin extra: liquidas todo en <strong>${base.months} meses</strong>, ~${fmt(base.totalInterest)} en intereses.</div>
+    ${extra > 0 ? `
+    <div class="item-sub">Con ${fmt(extra)} extra/mes: liquidas todo en <strong>${conExtra.months} meses</strong>, ~${fmt(conExtra.totalInterest)} en intereses.</div>
+    <div class="item-sub" style="color:var(--sage); font-weight:600;">🎉 Te ahorras ${mesesAhorrados} meses y ${fmt(interesAhorrado)} en intereses.</div>` : ''}
+  `;
+});
+
 function calcAutomatica(d) {
   const cant = d.cantidad_cuotas || 0;
   const restante = d.monto_restante != null ? d.monto_restante : (d.monto_aprobado || 0);
@@ -1053,6 +1144,17 @@ async function loadCuentas() {
     }
     const div = document.createElement('div');
     div.className = 'item';
+    const esAhorroCard = (c.tipo_cuenta || '').toLowerCase().includes('ahorro');
+    const saldoActualCard = ultimoSaldo ? ultimoSaldo.monto : 0;
+    let metaHtml = '';
+    if (esAhorroCard && c.meta_ahorro > 0) {
+      const pct = Math.min(100, Math.max(0, (saldoActualCard / c.meta_ahorro) * 100));
+      metaHtml = `
+        <div class="item-sub" style="display:flex; justify-content:space-between; margin-top:4px; margin-bottom:2px;">
+          <span>Meta: ${fmt(c.meta_ahorro, c.currency)}</span><span>${Math.round(pct)}%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div>`;
+    }
     div.innerHTML = `
       <div style="display:flex; align-items:flex-start; gap:10px;">
         ${badgeIcon(accountTypeMeta(c.tipo_cuenta).color, accountTypeMeta(c.tipo_cuenta).icon)}
@@ -1067,6 +1169,7 @@ async function loadCuentas() {
       </div>
       <div class="item-sub">${c.currency} · Último saldo: ${ultimoSaldo ? fmt(ultimoSaldo.monto, c.currency) + ' (' + ultimoSaldo.fecha + ')' : 'sin registrar'}</div>
       ${deltaHtml}
+      ${metaHtml}
       <div class="row2">
         <input type="number" inputmode="decimal" placeholder="Saldo de hoy" id="saldoMonto-${c.id}">
         <button class="primary" data-id="${c.id}" data-action="addSaldo">Guardar</button>
@@ -1074,7 +1177,8 @@ async function loadCuentas() {
       <div id="editCuenta-${c.id}" class="collapsible">
         <label class="field">Apodo</label>
         <input type="text" id="eNombreCuenta-${c.id}" value="${c.nombre || ''}">
-        <button class="primary small" data-id="${c.id}" data-action="saveEditCuenta">Guardar apodo</button>
+        ${esAhorroCard ? `<label class="field">Meta de ahorro (opcional)</label><input type="number" inputmode="decimal" id="eMetaAhorro-${c.id}" value="${c.meta_ahorro || ''}" placeholder="Ej. 10000">` : ''}
+        <button class="primary small" data-id="${c.id}" data-action="saveEditCuenta">Guardar cambios</button>
       </div>
     `;
     listEl.appendChild(div);
@@ -1090,9 +1194,12 @@ async function loadCuentas() {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
       const nombre = document.getElementById('eNombreCuenta-' + id).value.trim();
-      const { error } = await sb.from('cuentas').update({ nombre }).eq('id', id);
+      const metaEl = document.getElementById('eMetaAhorro-' + id);
+      const payload = { nombre };
+      if (metaEl) payload.meta_ahorro = metaEl.value ? parseFloat(metaEl.value) : null;
+      const { error } = await sb.from('cuentas').update(payload).eq('id', id);
       if (error) { showToast('No se pudo guardar.', '⚠️'); return; }
-      showToast('Apodo actualizado.');
+      showToast('Cambios guardados.');
       loadCuentas();
     });
   });
@@ -1274,6 +1381,16 @@ async function renderStats() {
   const { data: tarjetas } = await sb.from('tarjetas').select('*');
   const { data: saldosTarjeta } = await sb.from('saldos').select('*').order('fecha');
   const { data: gastosVarAll } = await sb.from('gastos_variables').select('*');
+  const { data: gastosFijosAll } = await sb.from('gastos_fijos').select('id, categoria, monto');
+  const { data: gastosFijosPagosAll } = await sb.from('gastos_fijos_pagos').select('*');
+  const combinedTransacciones = [
+    ...(gastosVarAll || []).map(g => ({ monto: g.monto || 0, categoria: g.categoria || 'otro', fecha: g.fecha })),
+    ...(gastosFijosPagosAll || []).map(p => {
+      const gf = (gastosFijosAll || []).find(x => x.id === p.id_gasto);
+      const monto = p.monto != null ? p.monto : (gf ? gf.monto : 0) || 0;
+      return { monto, categoria: gf ? (gf.categoria || 'otro') : 'otro', fecha: p.fecha };
+    })
+  ];
 
   el.innerHTML = `
     <div class="card">
@@ -1317,7 +1434,7 @@ async function renderStats() {
 
   // Gastos por categoría (todos los gastos registrados, agrupados)
   const totalesPorCategoria = {};
-  (gastosVarAll || []).forEach(g => {
+  combinedTransacciones.forEach(g => {
     const cat = g.categoria || 'otro';
     totalesPorCategoria[cat] = (totalesPorCategoria[cat] || 0) + (g.monto || 0);
   });
@@ -1351,7 +1468,7 @@ async function renderStats() {
   const prevDateObj = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const prevMonthKey = prevDateObj.getFullYear() + '-' + String(prevDateObj.getMonth() + 1).padStart(2, '0');
   const totalesMesActual = {}, totalesMesAnterior = {};
-  (gastosVarAll || []).forEach(g => {
+  combinedTransacciones.forEach(g => {
     const mk = (g.fecha || '').slice(0, 7);
     const cat = g.categoria || 'otro';
     if (mk === curMonthKey) totalesMesActual[cat] = (totalesMesActual[cat] || 0) + (g.monto || 0);
@@ -1586,11 +1703,12 @@ function renderInicio() {
 
   // Deuda total restante
   const hoyResumen = todayStr();
-  const deudaTotal = cacheDeudas.reduce((s, d) => {
-    if (d.tipo === 'automatica') return s + calcAutomatica(d).restante;
-    return s + (d.monto_restante != null ? d.monto_restante : (d.monto_aprobado || 0));
-  }, 0);
+  const deudaAutoTotal = cacheDeudas.filter(d => d.tipo === 'automatica').reduce((s, d) => s + calcAutomatica(d).restante, 0);
+  const deudaManualTotal = cacheDeudas.filter(d => d.tipo !== 'automatica').reduce((s, d) => s + (d.monto_restante != null ? d.monto_restante : (d.monto_aprobado || 0)), 0);
+  const deudaTotal = deudaAutoTotal + deudaManualTotal;
   document.getElementById('rDeuda').textContent = fmt(deudaTotal);
+  document.getElementById('rDeudaAuto').textContent = fmt(deudaAutoTotal);
+  document.getElementById('rDeudaManual').textContent = fmt(deudaManualTotal);
 
   // Totales de cuentas: separa "día a día" (monetaria) de "ahorros"
   let totalDiaADia = 0, totalAhorroQ = 0, totalAhorroUSD = 0;
