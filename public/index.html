@@ -3,7 +3,7 @@
 <head>
   
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="girl math">
@@ -47,7 +47,7 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
-  .wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px 60px; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: calc(24px + env(safe-area-inset-top, 0px)) 16px calc(60px + env(safe-area-inset-bottom, 0px)); }
   h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.5rem; margin: 0 0 4px; color: var(--teal); }
   .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
   .logo-row h1 { margin: 0;   line-height: 1;}
@@ -98,7 +98,7 @@
   .row2 { display: flex; gap: 8px; }
   .row2 > * { flex: 1; }
   .row2 > input, .row2 > select, .row2 > button { height: 42px; box-sizing: border-box; }
-  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--teal-dark); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; max-width: 90%; text-align: center; z-index: 50; box-shadow: 0 6px 20px rgba(0,0,0,0.18); }
+  .toast { position: fixed; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--teal-dark); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; max-width: 90%; text-align: center; z-index: 50; box-shadow: 0 6px 20px rgba(0,0,0,0.18); }
   .toast.show { opacity: 1; pointer-events: auto; }
   .footer-note { text-align: center; font-size: 0.75rem; color: var(--ink-soft); margin-top: 18px; }
   .auth-box { max-width: 340px; margin: 60px auto; }
@@ -167,9 +167,9 @@
     <!-- INICIO -->
     <div class="panel active" id="panel-inicio">
       <div class="card" style="text-align:center; background:linear-gradient(135deg, var(--teal), var(--teal-dark)); box-shadow:0 8px 22px rgba(137,2,62,0.28); margin-bottom:14px;">
-        <div style="font-size:0.8rem; color:rgba(255,255,255,0.85); margin-bottom:2px;">Patrimonio neto (Q)</div>
-        <div style="font-family:'Fraunces', serif; font-weight:600; font-size:2rem; color:#fff;" id="rPatrimonioNeto">Q0</div>
-        <div style="font-size:0.7rem; color:rgba(255,255,255,0.7); margin-top:2px;">Cuentas + ahorros − tarjeta (no incluye préstamos)</div>
+        <div style="font-size:0.8rem; color:rgba(255,255,255,0.85); margin-bottom:2px;">Total disponible (Q)</div>
+        <div style="font-family:'Fraunces', serif; font-weight:600; font-size:2rem; color:#fff;" id="rTotalDisponible">Q0</div>
+        <div style="font-size:0.7rem; color:rgba(255,255,255,0.7); margin-top:2px;" id="rTotalDisponibleNote">Cuentas + ahorros</div>
       </div>
       <div class="metric-grid">
         <div class="metric-card">
@@ -210,7 +210,7 @@
           <label class="field">¿Cuál cuenta?</label>
           <select id="qCuenta"></select>
           <div class="row2">
-            <div><label class="field">Monto</label><input type="number" id="qCuentaMonto"></div>
+            <div><label class="field">Monto</label><input type="number" inputmode="decimal" id="qCuentaMonto"></div>
             <div><label class="field">Fecha</label><input type="date" id="qCuentaFecha"></div>
           </div>
           <button class="primary" id="qCuentaSave">Guardar</button>
@@ -219,7 +219,7 @@
           <label class="field">¿Cuál deuda?</label>
           <select id="qDeuda"></select>
           <div class="row2">
-            <div><label class="field">Monto</label><input type="number" id="qDeudaMonto"></div>
+            <div><label class="field">Monto</label><input type="number" inputmode="decimal" id="qDeudaMonto"></div>
             <div><label class="field">Fecha</label><input type="date" id="qDeudaFecha"></div>
           </div>
           <button class="primary" id="qDeudaSave">Guardar</button>
@@ -228,20 +228,20 @@
           <label class="field">¿Cuál tarjeta?</label>
           <select id="qTarjeta"></select>
           <div class="row2">
-            <div><label class="field">Saldo al corte (Q)</label><input type="number" id="qCorteSaldo"></div>
-            <div><label class="field">Saldo al corte ($)</label><input type="number" id="qCorteSaldoUSD"></div>
+            <div><label class="field">Saldo al corte (Q)</label><input type="number" inputmode="decimal" id="qCorteSaldo"></div>
+            <div><label class="field">Saldo al corte ($)</label><input type="number" inputmode="decimal" id="qCorteSaldoUSD"></div>
           </div>
           <div class="row2">
-            <div><label class="field">Saldo al día (Q)</label><input type="number" id="qCorteSaldoDia"></div>
-            <div><label class="field">Saldo al día ($)</label><input type="number" id="qCorteSaldoDiaUSD"></div>
+            <div><label class="field">Saldo al día (Q)</label><input type="number" inputmode="decimal" id="qCorteSaldoDia"></div>
+            <div><label class="field">Saldo al día ($)</label><input type="number" inputmode="decimal" id="qCorteSaldoDiaUSD"></div>
           </div>
           <div class="row2">
-            <div><label class="field">Pago contado (Q)</label><input type="number" id="qCortePContado"></div>
-            <div><label class="field">Pago contado ($)</label><input type="number" id="qCortePContadoUSD"></div>
+            <div><label class="field">Pago contado (Q)</label><input type="number" inputmode="decimal" id="qCortePContado"></div>
+            <div><label class="field">Pago contado ($)</label><input type="number" inputmode="decimal" id="qCortePContadoUSD"></div>
           </div>
           <div class="row2">
-            <div><label class="field">Pago mínimo (Q)</label><input type="number" id="qCortePMin"></div>
-            <div><label class="field">Pago mínimo ($)</label><input type="number" id="qCortePMinUSD"></div>
+            <div><label class="field">Pago mínimo (Q)</label><input type="number" inputmode="decimal" id="qCortePMin"></div>
+            <div><label class="field">Pago mínimo ($)</label><input type="number" inputmode="decimal" id="qCortePMinUSD"></div>
           </div>
           <label class="field">Fecha</label>
           <input type="date" id="qCorteFecha">
@@ -253,7 +253,7 @@
           <label class="field">¿A cuál cuenta entra?</label>
           <select id="qMovDestino"></select>
           <div class="row2">
-            <div><label class="field">Monto</label><input type="number" id="qMovMonto"></div>
+            <div><label class="field">Monto</label><input type="number" inputmode="decimal" id="qMovMonto"></div>
             <div><label class="field">Fecha</label><input type="date" id="qMovFecha"></div>
           </div>
           <button class="primary" id="qMovSave">Guardar movimiento</button>
@@ -268,7 +268,7 @@
         <label class="field">¿De cuál cuenta pagaste?</label>
         <select id="gvCuenta"></select>
         <div class="row2">
-          <div><label class="field">Monto</label><input type="number" id="gvMonto"></div>
+          <div><label class="field">Monto</label><input type="number" inputmode="decimal" id="gvMonto"></div>
           <div><label class="field">Categoría</label>
             <select id="gvCategoria">
               <option value="casa">🏠 Casa</option>
@@ -297,7 +297,7 @@
           <label class="field">Nombre</label>
           <input type="text" id="gNombre" placeholder="Carro, Tennis, Medicamentos...">
           <div class="row2">
-            <div><label class="field">Monto</label><input type="number" id="gMonto"></div>
+            <div><label class="field">Monto</label><input type="number" inputmode="decimal" id="gMonto"></div>
             <div><label class="field">Frecuencia</label>
               <select id="gFrecuencia"><option value="semanal">Semanal</option><option value="quincenal">Quincenal</option><option value="mensual">Mensual</option><option value="cuotas">Cuotas (sin reinicio automático)</option></select>
             </div>
@@ -338,12 +338,12 @@
           <label class="field">Descripción</label>
           <input type="text" id="dDesc" placeholder="Opcional">
           <div class="row2">
-            <div><label class="field">Monto aprobado (Q)</label><input type="number" id="dMonto"></div>
-            <div><label class="field">Tasa interés (%)</label><input type="number" id="dTasa"></div>
+            <div><label class="field">Monto aprobado (Q)</label><input type="number" inputmode="decimal" id="dMonto"></div>
+            <div><label class="field">Tasa interés (%)</label><input type="number" inputmode="decimal" id="dTasa"></div>
           </div>
           <div class="row2">
-            <div><label class="field">Pago por cuota (Q)</label><input type="number" id="dPagoMensual"></div>
-            <div><label class="field">Cantidad cuotas</label><input type="number" id="dCantCuotas"></div>
+            <div><label class="field">Pago por cuota (Q)</label><input type="number" inputmode="decimal" id="dPagoMensual"></div>
+            <div><label class="field">Cantidad cuotas</label><input type="number" inputmode="decimal" id="dCantCuotas"></div>
           </div>
           <label class="field">Frecuencia del pago</label>
           <select id="dFrecuencia">
@@ -352,8 +352,8 @@
           </select>
           <label class="field">Saldo actual y cuotas pendientes (según tu banco)</label>
           <div class="row2">
-            <div><label class="field">Saldo actual (Q)</label><input type="number" id="dSaldoActual" placeholder="Igual al monto aprobado si es nueva"></div>
-            <div><label class="field">Cuotas pendientes</label><input type="number" id="dCuotasPendientes" placeholder="Igual a cant. cuotas si es nueva"></div>
+            <div><label class="field">Saldo actual (Q)</label><input type="number" inputmode="decimal" id="dSaldoActual" placeholder="Igual al monto aprobado si es nueva"></div>
+            <div><label class="field">Cuotas pendientes</label><input type="number" inputmode="decimal" id="dCuotasPendientes" placeholder="Igual a cant. cuotas si es nueva"></div>
           </div>
           <label class="field">Fecha inicio</label>
           <input type="date" id="dFechaInicio">
@@ -372,7 +372,7 @@
           <label class="field">Apodo</label>
           <input type="text" id="cNombre" placeholder="Principal, Vida, Ahorro USD...">
           <div class="row2">
-            <div><label class="field">No. cuenta</label><input type="text" id="cNoCuenta"></div>
+            <div><label class="field">No. cuenta</label><input type="text" inputmode="numeric" id="cNoCuenta"></div>
             <div><label class="field">Tipo</label><input type="text" id="cTipo" placeholder="Monetaria, Ahorro..."></div>
           </div>
           <label class="field">Moneda</label>
@@ -392,8 +392,8 @@
           <label class="field">Nombre</label>
           <input type="text" id="tNombre" placeholder="LifeMiles Platinum 9374">
           <div class="row2">
-            <div><label class="field">Fecha corte</label><input type="text" id="tFechaCorte" placeholder="16"></div>
-            <div><label class="field">Fecha pago</label><input type="text" id="tFechaPago" placeholder="09"></div>
+            <div><label class="field">Fecha corte</label><input type="text" inputmode="numeric" id="tFechaCorte" placeholder="16"></div>
+            <div><label class="field">Fecha pago</label><input type="text" inputmode="numeric" id="tFechaPago" placeholder="09"></div>
           </div>
           <button class="primary" id="addTarjetaBtn">Agregar tarjeta</button>
         </div>
@@ -645,7 +645,7 @@ async function loadGastosVariables() {
       </div>
       <div class="collapsible">
         <label class="field">Monto</label>
-        <input type="number" value="${g.monto}" class="editGvMonto">
+        <input type="number" inputmode="decimal" value="${g.monto}" class="editGvMonto">
         <label class="field">Categoría</label>
         <select class="editGvCategoria">${catOptions}</select>
         <label class="field">Cuenta</label>
@@ -753,7 +753,7 @@ async function loadGastos() {
         </div>
       </div>
       <div class="row2" style="margin-top:8px;">
-        <input type="number" placeholder="Monto (ej. una clase)" id="pagoGasto-${g.id}" value="${g.monto || ''}">
+        <input type="number" inputmode="decimal" placeholder="Monto (ej. una clase)" id="pagoGasto-${g.id}" value="${g.monto || ''}">
         <button class="primary" data-id="${g.id}" data-action="addPagoGasto">+ Agregar pago</button>
       </div>
     `;
@@ -892,7 +892,7 @@ async function loadDeudas() {
       cuotasRestantes = d.pago_mensual > 0 ? Math.ceil(restante / d.pago_mensual) : 0;
       pagoRowHtml = `
       <div class="row2">
-        <input type="number" placeholder="Monto del pago" id="pagoMonto-${d.id}">
+        <input type="number" inputmode="decimal" placeholder="Monto del pago" id="pagoMonto-${d.id}">
         <button class="primary" data-id="${d.id}" data-action="addPago">+ Pago</button>
       </div>`;
     }
@@ -925,12 +925,12 @@ async function loadDeudas() {
           <option value="automatica" ${d.tipo === 'automatica' ? 'selected' : ''}>🔁 Automática</option>
         </select>
         <div class="row2">
-          <div><label class="field">Monto aprobado</label><input type="number" id="eMonto-${d.id}" value="${d.monto_aprobado || 0}"></div>
-          <div><label class="field">Tasa interés</label><input type="number" id="eTasa-${d.id}" value="${d.tasa_interes || 0}"></div>
+          <div><label class="field">Monto aprobado</label><input type="number" inputmode="decimal" id="eMonto-${d.id}" value="${d.monto_aprobado || 0}"></div>
+          <div><label class="field">Tasa interés</label><input type="number" inputmode="decimal" id="eTasa-${d.id}" value="${d.tasa_interes || 0}"></div>
         </div>
         <div class="row2">
-          <div><label class="field">Pago por cuota</label><input type="number" id="ePagoMensual-${d.id}" value="${d.pago_mensual || 0}"></div>
-          <div><label class="field">Cant. cuotas</label><input type="number" id="eCantCuotas-${d.id}" value="${d.cantidad_cuotas || 0}"></div>
+          <div><label class="field">Pago por cuota</label><input type="number" inputmode="decimal" id="ePagoMensual-${d.id}" value="${d.pago_mensual || 0}"></div>
+          <div><label class="field">Cant. cuotas</label><input type="number" inputmode="decimal" id="eCantCuotas-${d.id}" value="${d.cantidad_cuotas || 0}"></div>
         </div>
         <label class="field">Frecuencia del pago</label>
         <select id="eFrecuencia-${d.id}">
@@ -938,8 +938,8 @@ async function loadDeudas() {
           <option value="quincenal" ${d.temporalidad === 'quincenal' ? 'selected' : ''}>Quincenal</option>
         </select>
         <div class="row2">
-          <div><label class="field">Saldo actual (Q, según banco)</label><input type="number" id="eSaldoActual-${d.id}" value="${d.monto_restante != null ? d.monto_restante : (d.monto_aprobado || 0)}"></div>
-          <div><label class="field">Cuotas pendientes</label><input type="number" id="eCuotasPendientes-${d.id}" value="${d.cuotas_pendientes != null ? d.cuotas_pendientes : (d.cantidad_cuotas || 0)}"></div>
+          <div><label class="field">Saldo actual (Q, según banco)</label><input type="number" inputmode="decimal" id="eSaldoActual-${d.id}" value="${d.monto_restante != null ? d.monto_restante : (d.monto_aprobado || 0)}"></div>
+          <div><label class="field">Cuotas pendientes</label><input type="number" inputmode="decimal" id="eCuotasPendientes-${d.id}" value="${d.cuotas_pendientes != null ? d.cuotas_pendientes : (d.cantidad_cuotas || 0)}"></div>
         </div>
         <button class="primary small" data-id="${d.id}" data-action="saveEdit">Guardar cambios</button>
       </div>
@@ -1078,7 +1078,7 @@ async function loadCuentas() {
       <div class="item-sub">${c.currency} · Último saldo: ${ultimoSaldo ? fmt(ultimoSaldo.monto, c.currency) + ' (' + ultimoSaldo.fecha + ')' : 'sin registrar'}</div>
       ${deltaHtml}
       <div class="row2">
-        <input type="number" placeholder="Saldo de hoy" id="saldoMonto-${c.id}">
+        <input type="number" inputmode="decimal" placeholder="Saldo de hoy" id="saldoMonto-${c.id}">
         <button class="primary" data-id="${c.id}" data-action="addSaldo">Guardar</button>
       </div>
       <div id="editCuenta-${c.id}" class="collapsible">
@@ -1180,24 +1180,24 @@ async function loadTarjetas() {
       <div class="item-sub">Saldo al día: Q${(ultimo.saldo_dia||0).toFixed(2)} · $${(ultimo.saldo_dia_usd||0).toFixed(2)}</div>
       <div class="item-sub" style="color:var(--sage);">Ya pagaste ${fmt(totalPagado)} desde entonces → debes ${fmt(saldoActual)}</div>
       <div class="row2">
-        <input type="number" placeholder="Monto del pago (Q)" id="pagoTarjeta-${t.id}">
+        <input type="number" inputmode="decimal" placeholder="Monto del pago (Q)" id="pagoTarjeta-${t.id}">
         <button class="primary" data-id="${t.id}" data-action="addPagoTarjeta">+ Pago</button>
       </div>` : `<div class="item-sub">Sin corte registrado todavía.</div>`}
       <div class="row2" style="margin-top:8px;">
-        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo corte (Q)</label><input type="number" id="scorte-${t.id}"></div>
-        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo corte ($)</label><input type="number" id="scorteusd-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo corte (Q)</label><input type="number" inputmode="decimal" id="scorte-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo corte ($)</label><input type="number" inputmode="decimal" id="scorteusd-${t.id}"></div>
       </div>
       <div class="row2">
-        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo al día (Q)</label><input type="number" id="sdia-${t.id}"></div>
-        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo al día ($)</label><input type="number" id="sdiausd-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo al día (Q)</label><input type="number" inputmode="decimal" id="sdia-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Saldo al día ($)</label><input type="number" inputmode="decimal" id="sdiausd-${t.id}"></div>
       </div>
       <div class="row2">
-        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago contado (Q)</label><input type="number" id="pcontado-${t.id}"></div>
-        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago contado ($)</label><input type="number" id="pcontadousd-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago contado (Q)</label><input type="number" inputmode="decimal" id="pcontado-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago contado ($)</label><input type="number" inputmode="decimal" id="pcontadousd-${t.id}"></div>
       </div>
       <div class="row2">
-        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago mínimo (Q)</label><input type="number" id="pmin-${t.id}"></div>
-        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago mínimo ($)</label><input type="number" id="pminusd-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago mínimo (Q)</label><input type="number" inputmode="decimal" id="pmin-${t.id}"></div>
+        <div style="flex:1;"><label class="field" style="margin-bottom:2px;">Pago mínimo ($)</label><input type="number" inputmode="decimal" id="pminusd-${t.id}"></div>
       </div>
       <button class="primary small" data-id="${t.id}" data-action="addCorte">Guardar corte de hoy</button>
     `;
@@ -1544,6 +1544,37 @@ function tarjetaSaldoActualQ(t) {
   const saldoDiaBase = ultimoSaldo.saldo_dia || ultimoSaldo.saldo_corte || 0;
   return Math.max(0, saldoDiaBase - totalPagado);
 }
+async function updateTotalDisponible(totalQ, totalUSD) {
+  const fx = await getExchangeRate();
+  const totalConvertido = totalQ + (totalUSD * fx);
+  const el = document.getElementById('rTotalDisponible');
+  if (el) el.textContent = fmt(totalConvertido, 'Q');
+  const noteEl = document.getElementById('rTotalDisponibleNote');
+  if (noteEl) {
+    noteEl.textContent = totalUSD > 0
+      ? `Cuentas + ahorros, incluye ${fmt(totalUSD, '$')} a Q${fx.toFixed(2)}/$`
+      : 'Cuentas + ahorros';
+  }
+}
+
+async function getExchangeRate() {
+  const today = todayStr();
+  const cachedRate = localStorage.getItem('gm_fx_rate');
+  const cachedDate = localStorage.getItem('gm_fx_date');
+  if (cachedRate && cachedDate === today) return parseFloat(cachedRate);
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await res.json();
+    const rate = data && data.rates && data.rates.GTQ;
+    if (rate) {
+      localStorage.setItem('gm_fx_rate', rate);
+      localStorage.setItem('gm_fx_date', today);
+      return rate;
+    }
+  } catch (e) {}
+  return cachedRate ? parseFloat(cachedRate) : 7.75;
+}
+
 function todayStr() {
   const d = new Date();
   const y = d.getFullYear();
@@ -1588,6 +1619,7 @@ function renderInicio() {
   document.getElementById('rCuentasQ').textContent = fmt(totalDiaADia, 'Q');
   document.getElementById('rAhorroQ').textContent = fmt(totalAhorroQ, 'Q');
   document.getElementById('rAhorroUSD').textContent = fmt(totalAhorroUSD, '$');
+  updateTotalDisponible(totalDiaADia + totalAhorroQ, totalAhorroUSD);
 
   // Sobra por cuenta: cada cuenta día a día, menos los gastos fijos pendientes asignados a ELLA
   const hoy = todayStr();
@@ -1626,11 +1658,6 @@ function renderInicio() {
     document.getElementById('rTarjetaSaldo').textContent = '-';
     document.getElementById('rDiasPago').textContent = '-';
   }
-
-  // Patrimonio neto (en Q): cuentas día a día + ahorros Q - deuda total - tarjetas (saldos en $ no se convierten, quedan fuera de este número)
-  const patrimonioNeto = totalDiaADia + totalAhorroQ - tarjetaTotalQ;
-  const pnEl = document.getElementById('rPatrimonioNeto');
-  if (pnEl) pnEl.textContent = fmt(patrimonioNeto);
 
   // Pagos mínimos de tarjetas: tabla con todas las tarjetas que tengan corte registrado
   const filasMinimos = cacheTarjetas.map(t => {
