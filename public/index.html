@@ -321,12 +321,15 @@
     <!-- DEUDAS -->
     <div class="panel" id="panel-deudas">
       <div class="card">
-        <h2 style="font-size:1rem;">Calculadora "bola de nieve"</h2>
-        <p class="sub" style="margin-bottom:10px;">¿Cuánto te ahorras si le metes un extra al mes?</p>
-        <label class="field">Pago extra mensual (Q)</label>
-        <input type="number" inputmode="decimal" id="snowballExtra" placeholder="Ej. 500">
-        <button class="primary" id="snowballCalcBtn">Calcular</button>
-        <div id="snowballResult" style="margin-top:10px;"></div>
+        <button class="ghost" id="btnShowSnowball">❄️ Calculadora "bola de nieve"</button>
+        <div id="formSnowball" class="collapsible">
+          <h2 style="font-size:1rem;">¿Qué es esto?</h2>
+          <p class="sub">La estrategia "bola de nieve" es: paga el mínimo de todas tus deudas, y cualquier dinero extra mándalo completo a la deuda más chica hasta liquidarla. Cuando la liquidas, ese pago completo (mínimo + extra) lo mandas a la siguiente deuda más chica — así la "bola" crece cada vez que terminas una. Aquí simulamos cuánto tiempo y dinero en intereses te ahorra hacer esto, comparado con no meter nada extra.</p>
+          <label class="field">Pago extra mensual (Q)</label>
+          <input type="number" inputmode="decimal" id="snowballExtra" placeholder="Ej. 500">
+          <button class="primary" id="snowballCalcBtn">Calcular</button>
+          <div id="snowballResult" style="margin-top:10px;"></div>
+        </div>
       </div>
       <div class="card">
         <button class="ghost" id="btnShowNuevaDeuda">+ Agregar deuda</button>
@@ -363,6 +366,10 @@
           <input type="date" id="dFechaInicio">
           <button class="primary" id="addDeudaBtn">Agregar deuda</button>
         </div>
+      </div>
+      <div class="card" id="deudasProgresoCard">
+        <h2 style="font-size:1rem;">Progreso total de tus deudas</h2>
+        <div id="deudasProgresoTotal"></div>
       </div>
       <div id="deudasList"></div>
     </div>
@@ -949,6 +956,24 @@ async function syncDeudaRestante(idDeuda) {
   await sb.from('deudas').update({ monto_restante: restante, cuotas_pendientes: cuotasPendientes }).eq('id', idDeuda);
 }
 
+const MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function shortDate(fechaStr) {
+  const parts = (fechaStr || '').split('-');
+  if (parts.length !== 3) return fechaStr;
+  const mIdx = parseInt(parts[1], 10) - 1;
+  const mes = MESES_CORTOS[mIdx] || parts[1];
+  return parseInt(parts[2], 10) + ' ' + mes;
+}
+
+function cuotaDots(total, pagadas) {
+  total = Math.min(total || 0, 30);
+  let dots = '';
+  for (let i = 0; i < total; i++) {
+    dots += `<span style="display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:3px; background:${i < pagadas ? 'var(--sage)' : 'var(--line)'};"></span>`;
+  }
+  return `<div style="line-height:1; margin-bottom:8px;">${dots}</div>`;
+}
+
 async function loadDeudas() {
   const { data: deudas, error } = await sb.from('deudas').select('*').order('id');
   if (error) { showToast('Error cargando deudas', '⚠️'); return; }
@@ -957,15 +982,17 @@ async function loadDeudas() {
   const listEl = document.getElementById('deudasList');
   listEl.innerHTML = '';
   const hoy = todayStr();
+  let totalAprobadoGeneral = 0, totalPagadoGeneral = 0;
   (deudas || []).forEach(d => {
-    let totalPagado, restante, cuotasRestantes, pagoRowHtml;
+    let totalPagado, restante, cuotasRestantes, pagoRowHtml, dotsHtml = '';
     if (d.tipo === 'automatica') {
       const c = calcAutomatica(d);
       totalPagado = c.pagado;
       restante = c.restante;
       cuotasRestantes = c.pendientes;
-      pagoRowHtml = `<div class="item-sub">🔁 Automática — cuota ${c.transcurridas} de ${d.cantidad_cuotas || 0}, se descuenta sola.</div>
-      ${c.pendientes > 0 ? `<button class="primary" style="margin-top:8px;" data-id="${d.id}" data-action="registrarCuotaAuto">✓ Ya se descontó esta cuota</button>` : ''}`;
+      dotsHtml = cuotaDots(d.cantidad_cuotas, c.transcurridas);
+      pagoRowHtml = `<div class="item-sub" style="margin-bottom:4px;">🔁 Se descuenta sola de tu banco</div>
+      ${c.pendientes > 0 ? `<button class="primary" data-id="${d.id}" data-action="registrarCuotaAuto">✓ Descontar cuota ${c.transcurridas + 1} de ${d.cantidad_cuotas || 0}</button>` : ''}`;
     } else {
       const misPagos = (pagos || []).filter(p => p.id_deuda === d.id);
       totalPagado = misPagos.reduce((s, p) => s + (p.monto_pagado || 0), 0);
@@ -980,22 +1007,31 @@ async function loadDeudas() {
     const esQuincenal = d.temporalidad === 'quincenal';
     const mesesRestantes = esQuincenal ? Math.ceil(cuotasRestantes / 2) : cuotasRestantes;
     const pct = d.monto_aprobado > 0 ? Math.min(100, (totalPagado / d.monto_aprobado) * 100) : 0;
+    totalAprobadoGeneral += (d.monto_aprobado || 0);
+    totalPagadoGeneral += totalPagado;
 
     const div = document.createElement('div');
     div.className = 'item';
     div.innerHTML = `
-      <div style="display:flex; gap:12px; align-items:flex-start;">
-        ${progressRing(pct)}
+      <div style="display:flex; align-items:flex-start; gap:10px;">
         <div style="flex:1;">
           <div class="item-title">${d.nombre}</div>
-          <div class="item-sub">${d.tasa_interes || 0}% · ${fmt(d.pago_mensual)}/${esQuincenal ? 'quincena' : 'mes'} · faltan ${cuotasRestantes} cuotas (~${mesesRestantes} meses)</div>
         </div>
         <div style="display:flex; gap:6px;">
           <button class="ghost small icon-btn" style="margin-top:0" data-id="${d.id}" data-action="toggleEdit" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l4 4"/></svg></button>
           <button class="danger-ghost small icon-btn" data-id="${d.id}" data-action="delDeuda" title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
         </div>
       </div>
-      <div class="item-sub" style="margin-top:8px;">${fmt(totalPagado)} pagado de ${fmt(d.monto_aprobado)} — ${fmt(restante)} restante</div>
+      <div style="display:flex; align-items:baseline; gap:6px; margin-top:4px;">
+        <span style="font-family:'Fraunces', serif; font-weight:600; font-size:1.4rem; color:var(--ink);">${fmt(restante)}</span>
+        <span class="item-sub" style="margin-bottom:0;">restante</span>
+      </div>
+      <div class="item-sub">de ${fmt(d.monto_aprobado)} · ${fmt(d.pago_mensual)}/${esQuincenal ? 'quincena' : 'mes'} · Tasa: ${d.tasa_interes || 0}% · faltan ${cuotasRestantes} cuotas (~${mesesRestantes} meses)</div>
+      <div style="display:flex; align-items:center; gap:8px; margin:8px 0;">
+        <div class="bar-track" style="flex:1; margin:0;"><div class="bar-fill" style="width:${pct}%;"></div></div>
+        <span class="item-sub" style="margin:0; white-space:nowrap;">${Math.round(pct)}%</span>
+      </div>
+      ${dotsHtml}
       ${pagoRowHtml}
       <div id="editForm-${d.id}" class="collapsible">
         <label class="field">Nombre</label>
@@ -1027,6 +1063,25 @@ async function loadDeudas() {
     `;
     listEl.appendChild(div);
   });
+
+  const progresoCard = document.getElementById('deudasProgresoCard');
+  if ((deudas || []).length === 0) {
+    progresoCard.style.display = 'none';
+  } else {
+    progresoCard.style.display = '';
+    const pctGeneral = totalAprobadoGeneral > 0 ? Math.min(100, (totalPagadoGeneral / totalAprobadoGeneral) * 100) : 0;
+    const restanteGeneral = Math.max(0, totalAprobadoGeneral - totalPagadoGeneral);
+    document.getElementById('deudasProgresoTotal').innerHTML = `
+      <div style="display:flex; align-items:baseline; gap:6px;">
+        <span style="font-family:'Fraunces', serif; font-weight:600; font-size:1.4rem; color:var(--ink);">${Math.round(pctGeneral)}%</span>
+        <span class="item-sub" style="margin-bottom:0;">pagado en total</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; margin:8px 0;">
+        <div class="bar-track" style="flex:1; margin:0;"><div class="bar-fill" style="width:${pctGeneral}%;"></div></div>
+      </div>
+      <div class="item-sub">${fmt(totalPagadoGeneral)} pagado de ${fmt(totalAprobadoGeneral)} · ${fmt(restanteGeneral)} restante entre todas tus deudas</div>
+    `;
+  }
 
   listEl.querySelectorAll('[data-action="toggleEdit"]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1511,12 +1566,12 @@ async function renderStats() {
   const comboData = [];
   fechasPasado.forEach(f => {
     acumulado += pagosSorted.filter(p => p.fecha === f).reduce((s,p) => s + (p.monto_pagado||0), 0);
-    comboLabels.push(f);
+    comboLabels.push(shortDate(f));
     comboData.push((totalAprobadoManual - acumulado) + autoRestanteHoy);
   });
   const manualRestanteHoy = fechasPasado.length ? (totalAprobadoManual - acumulado) : totalAprobadoManual;
-  if (comboLabels[comboLabels.length - 1] !== hoyCombo) {
-    comboLabels.push(hoyCombo);
+  if (comboLabels[comboLabels.length - 1] !== shortDate(hoyCombo)) {
+    comboLabels.push(shortDate(hoyCombo));
     comboData.push(manualRestanteHoy + autoRestanteHoy);
   }
   const maxPendientes = Math.min(12, autoDebts.length ? Math.max(...autoDebts.map(d => calcAutomatica(d).pendientes)) : 0);
@@ -1528,7 +1583,7 @@ async function renderStats() {
       const restanteD = Math.max(0, c.restante - m * (d.pago_mensual || 0));
       return s + (m <= c.pendientes ? restanteD : 0);
     }, 0);
-    comboLabels.push(fecha.toISOString().slice(0,10));
+    comboLabels.push(shortDate(fecha.toISOString().slice(0,10)));
     comboData.push(manualRestanteHoy + autoEnMes);
   }
   if (comboLabels.length === 0) { comboLabels.push('hoy'); comboData.push(0); }
@@ -1560,7 +1615,7 @@ async function renderStats() {
     const fecha = new Date(hoyCombo + 'T00:00:00');
     fecha.setMonth(fecha.getMonth() + m);
     const totalMes = (deudas || []).reduce((s, d) => s + (m < mesesRestantesDe(d) ? aportePorMesDe(d) : 0), 0);
-    cuotaLabels.push(fecha.toISOString().slice(0,10));
+    cuotaLabels.push(shortDate(fecha.toISOString().slice(0,10)));
     cuotaData.push(totalMes);
   }
   if (cuotaLabels.length === 0) { cuotaLabels.push('hoy'); cuotaData.push(0); }
@@ -1837,6 +1892,7 @@ Object.entries(quickActionMap).forEach(([btnId, formId]) => {
 document.getElementById('btnShowNuevoGasto').addEventListener('click', () => toggleForm('formNuevoGasto'));
 document.getElementById('btnShowGastosVariables').addEventListener('click', () => toggleForm('gastosVariablesCollapsible'));
 document.getElementById('btnShowNuevaDeuda').addEventListener('click', () => toggleForm('formNuevaDeuda'));
+document.getElementById('btnShowSnowball').addEventListener('click', () => toggleForm('formSnowball'));
 document.getElementById('btnShowNuevaCuenta').addEventListener('click', () => toggleForm('formNuevaCuenta'));
 document.getElementById('btnShowNuevaTarjeta').addEventListener('click', () => toggleForm('formNuevaTarjeta'));
 
